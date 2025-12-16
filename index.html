@@ -1,612 +1,716 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, Cell, PieChart, Pie
-} from 'recharts';
-import { 
-  LayoutDashboard, Upload, Clock, Activity, Search, Filter, Zap, RotateCcw, X, CheckCircle2, Trash2, Calendar, BarChart2
-} from 'lucide-react';
-
-// --- Configuration & Helpers ---
-
-const parseDurationToMinutes = (durationStr) => {
-  if (!durationStr) return 0;
-  // Format is usually HH:MM:SS
-  const parts = durationStr.split(':').map(Number);
-  if (parts.length === 3) {
-    return (parts[0] * 60) + parts[1] + (parts[2] / 60);
-  }
-  return 0;
-};
-
-const parseStartTimeToMinutes = (timeStr) => {
-  if (!timeStr) return 0;
-  const parts = timeStr.split(':').map(Number);
-  if (parts.length >= 2) {
-    return (parts[0] * 60) + parts[1] + (parts[2] ? parts[2] / 60 : 0);
-  }
-  return 0;
-};
-
-const extractCategory = (description) => {
-  if (!description) return "Unknown";
-  if (description.includes(':')) {
-    return description.split(':')[0].trim();
-  }
-  if (description.toLowerCase().includes('dairy')) return "Dairy System";
-  if (description.toLowerCase().includes('motor')) return "Motors/Drives";
-  return "General / Process";
-};
-
-// --- Custom Components ---
-
-// 1. Hourly Heatmap Grid
-const HeatmapGrid = ({ data, type = 'count' }) => {
-  const maxValue = Math.max(...data.map(d => d[type])) || 1;
-  
-  const getColor = (value) => {
-    const intensity = value / maxValue;
-    if (value === 0) return 'bg-slate-50';
-    if (intensity < 0.25) return 'bg-indigo-100 text-indigo-900';
-    if (intensity < 0.5) return 'bg-indigo-300 text-indigo-900';
-    if (intensity < 0.75) return 'bg-indigo-500 text-white';
-    return 'bg-indigo-700 text-white';
-  };
-
-  return (
-    <div className="grid grid-cols-6 gap-2">
-      {data.map((hour) => (
-        <div 
-          key={hour.hour} 
-          className={`
-            ${getColor(hour[type])} 
-            rounded-lg p-2 text-center transition-all hover:scale-105 cursor-default relative group
-          `}
-        >
-          <div className="text-[10px] uppercase font-bold opacity-60 mb-1">
-            {hour.hour}:00
-          </div>
-          <div className="text-sm font-bold">
-            {type === 'duration' ? Math.round(hour[type]) : hour[type]}
-            <span className="text-[9px] font-normal opacity-70 ml-0.5">
-              {type === 'duration' ? 'm' : ''}
-            </span>
-          </div>
-          
-          {/* Tooltip */}
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-32 bg-slate-800 text-white text-xs rounded p-2 z-10 shadow-lg pointer-events-none">
-            <div className="font-bold">{hour.hour}:00 - {hour.hour + 1}:00</div>
-            <div>Events: {hour.count}</div>
-            <div>Downtime: {hour.duration.toFixed(1)}m</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-// 2. Gantt Timeline Chart
-const TimelineChart = ({ data }) => {
-  // Group by Date
-  const groupedByDate = useMemo(() => {
-    const groups = {};
-    data.forEach(item => {
-      if (!groups[item.date]) groups[item.date] = [];
-      groups[item.date].push(item);
-    });
-    // Sort dates
-    return Object.entries(groups).sort((a, b) => new Date(a[1][0].timestamp) - new Date(b[1][0].timestamp));
-  }, [data]);
-
-  const totalMinutesInDay = 24 * 60;
-
-  return (
-    <div className="space-y-4 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
-      {groupedByDate.map(([date, events]) => (
-        <div key={date} className="relative">
-          <div className="flex items-center mb-1">
-            <span className="text-xs font-bold text-slate-500 w-20 shrink-0">{date}</span>
-            <div className="flex-1 h-6 bg-slate-100 rounded-full relative overflow-hidden border border-slate-200">
-              {/* Hour markers */}
-              {[0, 6, 12, 18].map(h => (
-                <div key={h} className="absolute top-0 bottom-0 border-l border-slate-300 opacity-30" style={{ left: `${(h / 24) * 100}%` }}></div>
-              ))}
-              
-              {/* Event Bars */}
-              {events.map((ev) => {
-                const startMins = parseStartTimeToMinutes(ev.startTime);
-                const widthPercent = Math.min((ev.durationMinutes / totalMinutesInDay) * 100, 100);
-                const leftPercent = (startMins / totalMinutesInDay) * 100;
-                
-                // Minimum visual width (0.2%) so very short events are visible
-                const visualWidth = Math.max(widthPercent, 0.4);
-
-                let colorClass = 'bg-indigo-500';
-                if (ev.durationMinutes > 30) colorClass = 'bg-red-500';
-                else if (ev.durationMinutes > 10) colorClass = 'bg-amber-500';
-
-                return (
-                  <div
-                    key={ev.id}
-                    className={`absolute top-0 bottom-0 ${colorClass} hover:brightness-110 cursor-pointer transition-all group`}
-                    style={{ 
-                      left: `${leftPercent}%`, 
-                      width: `${visualWidth}%` 
-                    }}
-                  >
-                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block w-48 bg-slate-900 text-white text-xs rounded p-2 z-20 shadow-xl pointer-events-none">
-                        <div className="font-bold text-indigo-300">{ev.startTime}</div>
-                        <div className="font-semibold">{ev.description}</div>
-                        <div className="mt-1 opacity-80">Duration: {ev.durationRaw}</div>
-                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      ))}
-      <div className="flex pl-20 text-[10px] text-slate-400 justify-between px-1">
-        <span>00:00</span>
-        <span>06:00</span>
-        <span>12:00</span>
-        <span>18:00</span>
-        <span>23:59</span>
-      </div>
-    </div>
-  );
-};
-
-// --- Main App ---
-
-export default function App() {
-  const [rawData, setRawData] = useState([]);
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [heatmapMetric, setHeatmapMetric] = useState('count'); // 'count' or 'duration'
-  
-  // Filters
-  const [selectedMachine, setSelectedMachine] = useState('All');
-  const [selectedEvent, setSelectedEvent] = useState(null); 
-
-  // --- CSV Parser with Forward Fill ---
-  const parseCustomCSV = (csvText) => {
-    const lines = csvText.split(/\r?\n/);
-    const data = [];
-    let lastDate = 'Unknown Date'; 
-
-    for (let i = 1; i < lines.length; i++) {
-      const rowRaw = lines[i];
-      if (!rowRaw.trim()) continue;
-
-      let row = [];
-      let inQuote = false;
-      let currentField = '';
-      
-      for (let charIndex = 0; charIndex < rowRaw.length; charIndex++) {
-        const char = rowRaw[charIndex];
-        if (char === '"') {
-          inQuote = !inQuote;
-        } else if (char === ',' && !inQuote) {
-          row.push(currentField);
-          currentField = '';
-        } else {
-          currentField += char;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLMS BREAKDOWN - Enterprise Dashboard</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#1e293b', 
+                            900: '#0f172a',
+                        },
+                        indigo: {
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                        }
+                    }
+                }
+            }
         }
-      }
-      row.push(currentField); 
+    </script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    
+    <!-- PropTypes -->
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+    
+    <!-- Recharts -->
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.3/Recharts.min.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 
-      if (row.length < 5) continue; 
+    <style>
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        body { background-color: #f1f5f9; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+        
+        #root:empty::before {
+            content: 'Initializing PLMS System...';
+            display: block;
+            text-align: center;
+            padding: 50px;
+            color: #64748b;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
 
-      // Date Filling
-      let dateStr = row[0].trim();
-      let isFilled = false;
-      if (dateStr && dateStr.length > 0) {
-        lastDate = dateStr;
-      } else {
-        dateStr = lastDate;
-        isFilled = true; 
-      }
+    <script type="text/babel">
+        // --- Safe Globals Extraction ---
+        const { useState, useEffect, useMemo, useCallback } = React;
+        const { 
+            BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
+            ResponsiveContainer, AreaChart, Area, Cell, LabelList 
+        } = window.Recharts;
 
-      let description = row[4] ? row[4].replace(/^"|"$/g, '').replace(/""/g, '"').trim() : "Unknown";
-      let line = row[2] ? row[2].trim() : "Unknown Line";
-      
-      // Calculations
-      const durationMinutes = parseDurationToMinutes(row[5]);
+        // --- Icons ---
+        const IconActivity = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>;
+        const IconClock = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+        const IconZap = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
+        const IconRotateCcw = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>;
+        const IconUpload = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>;
+        const IconTrash2 = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
+        const IconSearch = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+        const IconFileText = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>;
+        const IconGrid = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>;
+        const IconBarChart2 = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>;
+        const IconCalendar = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>;
 
-      // Date Parsing
-      const dateParts = dateStr.split('/'); 
-      let timestamp = 0;
-      if (dateParts.length === 3) {
-        timestamp = new Date(dateParts[2], dateParts[0] - 1, dateParts[1]).getTime();
-      }
+        // --- Helper Logic ---
 
-      // Hour Parsing
-      let hour = -1;
-      if (row[1]) {
-        const timeParts = row[1].split(':');
-        if (timeParts.length > 0) hour = parseInt(timeParts[0], 10);
-      }
+        const parseDurationToMinutes = (durationStr) => {
+            if (!durationStr) return 0;
+            const parts = durationStr.split(':').map(Number);
+            if (parts.length === 3) {
+                return (parts[0] * 60) + parts[1] + (parts[2] / 60);
+            }
+            return 0;
+        };
 
-      data.push({
-        id: i,
-        date: dateStr, 
-        isFilled: isFilled, 
-        timestamp: timestamp,
-        startTime: row[1],
-        hour: hour,
-        line: line,
-        eventCode: row[3],
-        description: description,
-        category: extractCategory(description),
-        durationRaw: row[5],
-        durationMinutes: durationMinutes,
-        packages: parseInt(row[6]) || 0,
-      });
-    }
-    return data;
-  };
+        const parseStartTimeToMinutes = (timeStr) => {
+            if (!timeStr) return 0;
+            const parts = timeStr.split(':').map(Number);
+            if (parts.length >= 2) {
+                return (parts[0] * 60) + parts[1] + (parts[2] ? parts[2] / 60 : 0);
+            }
+            return 0;
+        };
 
-  const MOCK_CSV_DATA = `Date,Start Time,Line ,Event Code Number,Event Code Description,Duration,Packages,Other Code,Original Event Code,Original Event Description,Information Events
+        const extractCategory = (description) => {
+            if (!description) return "Unknown";
+            if (description.includes(':')) return description.split(':')[0].trim();
+            if (description.toLowerCase().includes('dairy')) return "Dairy System";
+            if (description.toLowerCase().includes('motor')) return "Motors/Drives";
+            return "General / Process";
+        };
+
+        // --- Components ---
+
+        const HeatmapGrid = ({ data, type = 'count' }) => {
+            const maxValue = Math.max(...data.map(d => d[type])) || 1;
+            
+            const getColor = (value) => {
+                const intensity = value / maxValue;
+                if (value === 0) return 'bg-slate-50 border-slate-100';
+                if (intensity < 0.25) return 'bg-indigo-50 border-indigo-100 text-indigo-900';
+                if (intensity < 0.5) return 'bg-indigo-200 border-indigo-300 text-indigo-900';
+                if (intensity < 0.75) return 'bg-indigo-400 border-indigo-500 text-white';
+                return 'bg-indigo-600 border-indigo-700 text-white';
+            };
+
+            return (
+                <div className="grid grid-cols-6 md:grid-cols-12 gap-2">
+                {data.map((hour) => (
+                    <div key={hour.hour} className={`
+                        ${getColor(hour[type])} 
+                        border rounded-lg p-2 text-center transition-all hover:scale-110 cursor-default relative group shadow-sm
+                    `}>
+                        <div className="text-[10px] uppercase font-bold opacity-60 mb-1">{hour.hour}:00</div>
+                        <div className="text-sm font-bold">
+                            {type === 'duration' ? Math.round(hour[type]) : hour[type]}
+                            <span className="text-[9px] font-normal opacity-70 ml-0.5">{type === 'duration' ? 'm' : ''}</span>
+                        </div>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-36 bg-slate-900 text-white text-xs rounded p-2 z-20 shadow-xl pointer-events-none">
+                            <div className="font-bold border-b border-slate-700 pb-1 mb-1">{hour.hour}:00 - {hour.hour + 1}:00</div>
+                            <div className="flex justify-between"><span>Events:</span> <span>{hour.count}</span></div>
+                            <div className="flex justify-between"><span>Downtime:</span> <span>{hour.duration.toFixed(1)}m</span></div>
+                        </div>
+                    </div>
+                ))}
+                </div>
+            );
+        };
+
+        const TimelineChart = ({ data }) => {
+            const groupedByDate = useMemo(() => {
+                const groups = {};
+                data.forEach(item => {
+                    if (!groups[item.date]) groups[item.date] = [];
+                    groups[item.date].push(item);
+                });
+                return Object.entries(groups).sort((a, b) => new Date(a[1][0].timestamp) - new Date(b[1][0].timestamp));
+            }, [data]);
+
+            const totalMinutesInDay = 24 * 60;
+
+            return (
+                <div className="space-y-6 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar">
+                {groupedByDate.map(([date, events]) => (
+                    <div key={date} className="relative">
+                        <div className="flex items-center mb-1">
+                            <div className="w-24 shrink-0 flex flex-col items-end mr-3">
+                                <span className="text-xs font-bold text-slate-700">{date}</span>
+                                <span className="text-[10px] text-slate-400">{events.length} Events</span>
+                            </div>
+                            <div className="flex-1 h-8 bg-slate-100 rounded-lg relative overflow-hidden border border-slate-200 shadow-inner">
+                                {[0, 6, 12, 18].map(h => (
+                                    <div key={h} className="absolute top-0 bottom-0 border-l border-slate-300 opacity-40" style={{ left: `${(h / 24) * 100}%` }}>
+                                        <span className="absolute top-1 left-1 text-[9px] text-slate-400 font-mono">{h}:00</span>
+                                    </div>
+                                ))}
+                                {events.map((ev) => {
+                                    const startMins = parseStartTimeToMinutes(ev.startTime);
+                                    const widthPercent = Math.min((ev.durationMinutes / totalMinutesInDay) * 100, 100);
+                                    const leftPercent = (startMins / totalMinutesInDay) * 100;
+                                    const visualWidth = Math.max(widthPercent, 0.4);
+                                    let colorClass = 'bg-indigo-500';
+                                    if (ev.durationMinutes > 30) colorClass = 'bg-red-500';
+                                    else if (ev.durationMinutes > 10) colorClass = 'bg-amber-500';
+
+                                    return (
+                                        <div key={ev.id} className={`absolute top-0 bottom-0 ${colorClass} hover:brightness-125 cursor-pointer transition-all group`}
+                                            style={{ left: `${leftPercent}%`, width: `${visualWidth}%` }}>
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 bg-slate-900 text-white text-xs rounded-md p-3 z-30 shadow-2xl pointer-events-none">
+                                                <div className="flex justify-between items-center mb-1 border-b border-slate-700 pb-1">
+                                                    <span className="font-bold text-indigo-300">{ev.startTime}</span>
+                                                    <span className="bg-slate-800 px-1.5 rounded text-[10px]">{ev.line}</span>
+                                                </div>
+                                                <div className="font-medium mb-1">{ev.description}</div>
+                                                <div className="opacity-80 flex justify-between"><span>Duration:</span> <span className="font-mono">{ev.durationRaw}</span></div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                ))}
+                </div>
+            );
+        };
+
+        const StatCard = ({ title, value, icon: Icon, colorClass, colorText }) => (
+            <div className="glass-panel p-5 rounded-xl relative overflow-hidden group transition-all hover:translate-y-[-2px]">
+                <div className={`absolute -right-6 -top-6 p-6 opacity-[0.08] ${colorText} transform rotate-12 group-hover:scale-110 transition-transform`}>
+                    <Icon className="w-32 h-32" />
+                </div>
+                <div className="flex justify-between items-start relative z-10">
+                    <div>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{title}</p>
+                        <h3 className="text-3xl font-extrabold text-slate-800 tracking-tight">{value}</h3>
+                    </div>
+                    <div className={`p-3 rounded-lg shadow-sm ${colorClass} ${colorText}`}>
+                        <Icon className="w-6 h-6" />
+                    </div>
+                </div>
+            </div>
+        );
+
+        // --- Main App ---
+
+        const App = () => {
+            const [uploadedFiles, setUploadedFiles] = useState([]); // [{id, name, data: []}]
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [searchQuery, setSearchQuery] = useState('');
+            const [isProcessing, setIsProcessing] = useState(false);
+            const [heatmapMetric, setHeatmapMetric] = useState('count');
+            const [selectedLine, setSelectedLine] = useState('All');
+            const [selectedDate, setSelectedDate] = useState('All');
+            
+            // Mock Data (Loaded as a "System File" initially)
+            const MOCK_DATA_STR = `Date,Start Time,Line ,Event Code Number,Event Code Description,Duration,Packages,Other Code,Original Event Code,Original Event Description,Information Events
 11/7/2025,04:33:11,Line A,573304300,"CBP HTW: Tray transport tray control - no tray ""B1321""",0:07:12,43,200,0,,
 ,04:47:54,Line A,103781090,Dairy not ready,0:02:19,46,200,0,,
 ,15:36:12,Line A,103399300,Motor start,0:00:21,42,300,0,,
-,15:47:46,Line A,573304310,"CBP HTW: Tray transport tray control - tray get stuck ""B1322""",0:12:23,42,200,0,,
-,18:27:40,Line A,573704010,"CBP HTW: Tray extractor - tray magazine empty ""B1332""",0:03:06,43,200,0,,
-,19:46:43,Line A,103781090,Dairy not ready,0:54:12,246,200,0,,`;
+,15:47:46,Line B,573304310,"CBP HTW: Tray transport tray control - tray get stuck ""B1322""",0:12:23,42,200,0,,
+,18:27:40,Line C,573704010,"CBP HTW: Tray extractor - tray magazine empty ""B1332""",0:03:06,43,200,0,,
+,19:46:43,Line D,103781090,Dairy not ready,0:54:12,246,200,0,,`;
 
-  useEffect(() => {
-    const data = parseCustomCSV(MOCK_CSV_DATA);
-    setRawData(data);
-  }, []);
+            const parseCSV = (csvText, fileName) => {
+                const lines = csvText.split(/\r?\n/);
+                const data = [];
+                let lastDate = 'Unknown Date'; 
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setIsProcessing(true);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setTimeout(() => {
-            setRawData(parseCustomCSV(e.target.result));
-            setSelectedMachine('All');
-            setSelectedEvent(null);
-            setIsProcessing(false);
-        }, 300);
-      };
-      reader.readAsText(file);
-    }
-  };
+                for (let i = 1; i < lines.length; i++) {
+                    const rowRaw = lines[i];
+                    if (!rowRaw.trim()) continue;
 
-  const handleClearData = () => {
-    if(window.confirm("Are you sure you want to clear all imported data?")) {
-      setRawData([]);
-      setSelectedMachine('All');
-      setSelectedEvent(null);
-    }
-  };
+                    let row = [];
+                    let inQuote = false;
+                    let currentField = '';
+                    for (let c = 0; c < rowRaw.length; c++) {
+                        const char = rowRaw[c];
+                        if (char === '"') inQuote = !inQuote;
+                        else if (char === ',' && !inQuote) { row.push(currentField); currentField = ''; }
+                        else currentField += char;
+                    }
+                    row.push(currentField); 
+                    if (row.length < 5) continue; 
 
-  // --- Filter Logic ---
-  
-  const filteredData = useMemo(() => {
-    let data = rawData;
-    if (selectedMachine !== 'All') data = data.filter(d => d.category === selectedMachine);
-    if (selectedEvent) data = data.filter(d => d.description === selectedEvent);
-    if (searchQuery && activeTab === 'data') {
-       data = data.filter(row => 
-        row.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        row.eventCode.includes(searchQuery)
-      );
-    }
-    return data;
-  }, [rawData, selectedMachine, selectedEvent, searchQuery, activeTab]);
+                    let dateStr = row[0].trim();
+                    let isFilled = false;
+                    if (dateStr) lastDate = dateStr;
+                    else { dateStr = lastDate; isFilled = true; }
 
-  // --- Statistics Calculation ---
+                    let description = row[4] ? row[4].replace(/^"|"$/g, '').replace(/""/g, '"').trim() : "Unknown";
+                    // SMART LINE DETECTION:
+                    // 1. Try column 2 (Line column in standard template)
+                    // 2. Fallback to searching the row for "Line X"
+                    let line = row[2] ? row[2].trim() : "Unknown";
+                    
+                    const durationMinutes = parseDurationToMinutes(row[5]);
+                    const dateParts = dateStr.split('/'); 
+                    let timestamp = 0;
+                    if (dateParts.length === 3) timestamp = new Date(dateParts[2], dateParts[0] - 1, dateParts[1]).getTime();
 
-  const stats = useMemo(() => {
-    if (filteredData.length === 0) return null;
+                    let hour = -1;
+                    if (row[1]) {
+                        const timeParts = row[1].split(':');
+                        if (timeParts.length > 0) hour = parseInt(timeParts[0], 10);
+                    }
 
-    const totalEvents = filteredData.length;
-    const totalDuration = filteredData.reduce((acc, curr) => acc + curr.durationMinutes, 0);
-    const avgDuration = totalEvents > 0 ? totalDuration / totalEvents : 0;
-    
-    // Group by Description (Pareto)
-    const eventGroups = {};
-    filteredData.forEach(row => {
-      if (!eventGroups[row.description]) {
-        eventGroups[row.description] = { name: row.description, count: 0, duration: 0 };
-      }
-      eventGroups[row.description].count += 1;
-      eventGroups[row.description].duration += row.durationMinutes;
-    });
+                    data.push({
+                        id: `${fileName}-${i}`,
+                        date: dateStr, 
+                        isFilled, 
+                        timestamp,
+                        startTime: row[1],
+                        hour,
+                        line, // "Line A", "Line B", etc.
+                        eventCode: row[3],
+                        description,
+                        category: extractCategory(description),
+                        durationRaw: row[5],
+                        durationMinutes,
+                    });
+                }
+                return data;
+            };
 
-    // Group by Date (Trend)
-    const dateGroups = {};
-    filteredData.forEach(row => {
-      const dateKey = row.date || 'Unknown';
-      if (!dateGroups[dateKey]) {
-        dateGroups[dateKey] = { date: dateKey, duration: 0, count: 0, timestamp: row.timestamp };
-      }
-      dateGroups[dateKey].duration += row.durationMinutes;
-      dateGroups[dateKey].count += 1;
-    });
-    const trendData = Object.values(dateGroups).sort((a,b) => a.timestamp - b.timestamp);
+            // Initialize with Mock Data
+            useEffect(() => {
+                const initialData = parseCSV(MOCK_DATA_STR, "Demo_Data.csv");
+                setUploadedFiles([{ id: 'demo', name: 'Demo_Data.csv', data: initialData }]);
+            }, []);
 
-    // Hourly Heatmap Data
-    const hourGroups = Array(24).fill(0).map((_, i) => ({ hour: i, count: 0, duration: 0 }));
-    filteredData.forEach(row => {
-      if (row.hour >= 0 && row.hour < 24) {
-        hourGroups[row.hour].count += 1;
-        hourGroups[row.hour].duration += row.durationMinutes;
-      }
-    });
+            const handleFileUpload = (event) => {
+                const files = Array.from(event.target.files);
+                setIsProcessing(true);
+                
+                setTimeout(() => {
+                    const newFiles = [];
+                    let processedCount = 0;
 
-    // Group by Machine
-    const machineGroups = {};
-    filteredData.forEach(row => {
-        if(!machineGroups[row.category]) machineGroups[row.category] = 0;
-        machineGroups[row.category] += row.durationMinutes;
-    });
-    const machineDistribution = Object.entries(machineGroups).map(([name, value]) => ({ name, value }));
+                    files.forEach(file => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const parsedData = parseCSV(e.target.result, file.name);
+                            newFiles.push({
+                                id: Math.random().toString(36).substr(2, 9),
+                                name: file.name,
+                                data: parsedData
+                            });
+                            processedCount++;
+                            if (processedCount === files.length) {
+                                setUploadedFiles(prev => [...prev, ...newFiles]);
+                                setIsProcessing(false);
+                            }
+                        };
+                        reader.readAsText(file);
+                    });
+                }, 500); // Simulate processing delay
+            };
 
-    return {
-      totalEvents,
-      totalDuration,
-      avgDuration, 
-      paretoData: Object.values(eventGroups).sort((a,b) => b.duration - a.duration),
-      trendData,
-      hourData: hourGroups,
-      machineDistribution,
-      uniqueMachines: ['All', ...new Set(rawData.map(d => d.category))].filter(Boolean)
-    };
-  }, [filteredData, rawData]);
+            const removeFile = (fileId) => {
+                if(confirm("Remove this file from the dashboard?")) {
+                    setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
+                }
+            };
 
-  const handleBarClick = (data) => {
-    if (data && data.name) {
-      setSelectedEvent(selectedEvent === data.name ? null : data.name);
-    }
-  };
+            // Combine all data from all files
+            const combinedData = useMemo(() => {
+                // Sort by timestamp descending (newest first)
+                return uploadedFiles.flatMap(f => f.data).sort((a,b) => b.timestamp - a.timestamp);
+            }, [uploadedFiles]);
 
-  // --- Empty State ---
-  if (rawData.length === 0) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-        <div className="text-center max-w-md">
-          <div className="bg-indigo-100 p-4 rounded-full inline-flex mb-6">
-            <Activity className="w-12 h-12 text-indigo-600" />
-          </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">OEE<span className="text-indigo-600">Sight</span></h1>
-          <p className="text-slate-500 mb-8">
-            Manufacturing Intelligence Dashboard. Import your CSV data to analyze downtime events, gantt timelines, and heatmaps.
-          </p>
-          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-indigo-300 border-dashed rounded-lg cursor-pointer bg-white hover:bg-indigo-50 transition-colors">
-            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-              {isProcessing ? <Activity className="w-8 h-8 text-indigo-500 animate-spin mb-2" /> : <Upload className="w-8 h-8 text-indigo-500 mb-2" />}
-              <p className="text-sm text-slate-700 font-medium">{isProcessing ? "Processing..." : "Click to Upload CSV"}</p>
-            </div>
-            <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
-          </label>
-        </div>
-      </div>
-    );
-  }
+            // Get Unique Dates for Filtering
+            const uniqueDates = useMemo(() => {
+                const dates = [...new Set(combinedData.map(d => d.date))];
+                // Sort dates chronologically
+                return ['All', ...dates.sort((a, b) => {
+                    const da = new Date(a);
+                    const db = new Date(b);
+                    return da - db;
+                })];
+            }, [combinedData]);
 
-  return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      
-      {/* Top Navigation */}
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className="bg-indigo-600 p-2 rounded-lg">
-                <Activity className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <span className="font-bold text-xl text-slate-800 tracking-tight block leading-none">OEE<span className="text-indigo-600">Sight</span></span>
-                <span className="text-[10px] text-slate-400 font-medium tracking-wide">INTELLIGENT MANUFACTURING</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="hidden md:flex bg-slate-100 rounded-lg p-1">
-                <button 
-                  onClick={() => setActiveTab('dashboard')}
-                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  Dashboard
-                </button>
-                <button 
-                  onClick={() => setActiveTab('data')}
-                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'data' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  Raw Logs
-                </button>
-              </div>
-              <button onClick={handleClearData} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Clear All Data">
-                <Trash2 className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+            // Filter Logic (Global)
+            const filteredData = useMemo(() => {
+                let data = combinedData;
 
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                // Line Filter
+                if (selectedLine !== 'All') {
+                    // Smart match: "Line A" matches "Line A"
+                    data = data.filter(d => d.line && d.line.includes(selectedLine));
+                }
 
-        {/* Filters Bar */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-           <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto no-scrollbar">
-              <Filter className="w-4 h-4 text-slate-400 mr-2" />
-              {stats?.uniqueMachines.map(m => (
-                <button 
-                  key={m} 
-                  onClick={() => { setSelectedMachine(m); setSelectedEvent(null); }}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border ${selectedMachine === m ? 'bg-indigo-100 text-indigo-700 border-indigo-200 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'}`}
-                >
-                  {m}
-                </button>
-              ))}
-           </div>
-           
-           {selectedEvent && (
-             <div className="flex items-center gap-2 bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg border border-amber-200 text-sm animate-fade-in">
-                <span className="font-semibold">Drilldown:</span> {selectedEvent.substring(0, 30)}...
-                <button onClick={() => setSelectedEvent(null)}><X className="w-4 h-4 hover:bg-amber-100 rounded-full" /></button>
-             </div>
-           )}
-        </div>
+                // Date Filter
+                if (selectedDate !== 'All') {
+                    data = data.filter(d => d.date === selectedDate);
+                }
 
-        {activeTab === 'dashboard' && stats ? (
-          <div className="space-y-6">
-            
-            {/* KPI Row (Cleaned up) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-3 opacity-5 text-indigo-600"><Clock className="w-24 h-24" /></div>
-                <div className="flex justify-between items-center relative z-10">
-                  <div>
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Total Downtime</p>
-                    <h3 className="text-2xl font-bold text-slate-800">{stats.totalDuration.toFixed(0)} min</h3>
-                  </div>
-                  <div className="p-2 rounded-lg bg-indigo-100 text-indigo-600"><Clock className="w-5 h-5" /></div>
-                </div>
-              </div>
+                // Text Search
+                if (searchQuery) {
+                    const q = searchQuery.toLowerCase();
+                    data = data.filter(d => 
+                        d.description.toLowerCase().includes(q) ||
+                        d.eventCode.includes(q) ||
+                        d.line.toLowerCase().includes(q)
+                    );
+                }
+                return data;
+            }, [combinedData, selectedLine, selectedDate, searchQuery]);
 
-              <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-3 opacity-5 text-orange-600"><Zap className="w-24 h-24" /></div>
-                <div className="flex justify-between items-center relative z-10">
-                  <div>
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Events</p>
-                    <h3 className="text-2xl font-bold text-slate-800">{stats.totalEvents}</h3>
-                  </div>
-                  <div className="p-2 rounded-lg bg-orange-100 text-orange-600"><Zap className="w-5 h-5" /></div>
-                </div>
-              </div>
+            // Stats
+            const stats = useMemo(() => {
+                const totalEvents = filteredData.length;
+                const totalDuration = filteredData.reduce((acc, curr) => acc + curr.durationMinutes, 0);
+                const avgDuration = totalEvents > 0 ? totalDuration / totalEvents : 0;
+                
+                const eventGroups = {};
+                filteredData.forEach(row => {
+                    if (!eventGroups[row.description]) {
+                        eventGroups[row.description] = { name: row.description, count: 0, duration: 0 };
+                    }
+                    eventGroups[row.description].count += 1;
+                    eventGroups[row.description].duration += row.durationMinutes;
+                });
 
-              <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-3 opacity-5 text-emerald-600"><RotateCcw className="w-24 h-24" /></div>
-                <div className="flex justify-between items-center relative z-10">
-                  <div>
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">MTTR</p>
-                    <h3 className="text-2xl font-bold text-slate-800">{stats.avgDuration.toFixed(1)} min</h3>
-                  </div>
-                  <div className="p-2 rounded-lg bg-emerald-100 text-emerald-600"><RotateCcw className="w-5 h-5" /></div>
-                </div>
-              </div>
-            </div>
+                const hourGroups = Array(24).fill(0).map((_, i) => ({ hour: i, count: 0, duration: 0 }));
+                filteredData.forEach(row => {
+                    if (row.hour >= 0 && row.hour < 24) {
+                        hourGroups[row.hour].count += 1;
+                        hourGroups[row.hour].duration += row.durationMinutes;
+                    }
+                });
 
-            {/* GANTT TIMELINE VIEW */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-               <SectionHeader title="Timeline View" subtitle="Visualizing machine stops throughout the day" />
-               <TimelineChart data={filteredData} />
-            </div>
+                return {
+                    totalEvents,
+                    totalDuration,
+                    avgDuration, 
+                    paretoData: Object.values(eventGroups).sort((a,b) => b.duration - a.duration),
+                    hourData: hourGroups
+                };
+            }, [filteredData]);
 
-            {/* Charts Row: Heatmap & Frequency Pareto */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-               {/* Hourly Heatmap */}
-               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <SectionHeader title="Hourly Heatmap" subtitle="When do failures occur?" />
-                    <div className="flex bg-slate-100 rounded-lg p-0.5">
-                      <button 
-                        onClick={() => setHeatmapMetric('count')} 
-                        className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${heatmapMetric === 'count' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}
-                      >
-                        Frequency
-                      </button>
-                      <button 
-                        onClick={() => setHeatmapMetric('duration')} 
-                        className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${heatmapMetric === 'duration' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}
-                      >
-                        Downtime
-                      </button>
+            return (
+                <div className="min-h-screen text-slate-800 pb-20">
+                    {/* --- High Tech Header --- */}
+                    <nav className="bg-slate-900 text-white sticky top-0 z-50 shadow-lg border-b border-slate-700">
+                        <div className="max-w-[1600px] mx-auto px-4">
+                            <div className="flex flex-col xl:flex-row items-center justify-between h-auto xl:h-16 py-3 xl:py-0 gap-4">
+                                {/* Branding */}
+                                <div className="flex items-center gap-3 shrink-0">
+                                    <div className="bg-indigo-600 p-2 rounded-lg shadow-indigo-500/50 shadow-lg">
+                                        <IconActivity className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <span className="font-bold text-xl tracking-tight block leading-none">PLMS <span className="text-indigo-400">BREAKDOWN</span></span>
+                                        <span className="text-[10px] text-slate-400 font-medium tracking-widest uppercase">Enterprise</span>
+                                    </div>
+                                </div>
+
+                                {/* Center: Smart Search & Line Selectors */}
+                                <div className="flex flex-1 items-center justify-center gap-4 w-full xl:w-auto">
+                                    {/* Line Filters */}
+                                    <div className="flex bg-slate-800 p-1 rounded-lg border border-slate-700">
+                                        {['All', 'Line A', 'Line B', 'Line C', 'Line D'].map(line => (
+                                            <button 
+                                                key={line}
+                                                onClick={() => setSelectedLine(line)}
+                                                className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                                                    selectedLine === line 
+                                                    ? 'bg-indigo-600 text-white shadow-lg' 
+                                                    : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                                                }`}
+                                            >
+                                                {line === 'All' ? 'ALL LINES' : line.toUpperCase()}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Date Filter */}
+                                    <div className="relative group">
+                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                                            <IconCalendar className="w-4 h-4" />
+                                        </div>
+                                        <select 
+                                            value={selectedDate}
+                                            onChange={(e) => setSelectedDate(e.target.value)}
+                                            className="appearance-none bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-8 py-1.5 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer min-w-[140px]"
+                                        >
+                                            {uniqueDates.map(date => (
+                                                <option key={date} value={date}>{date === 'All' ? 'All Dates' : date}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                            <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                        </div>
+                                    </div>
+
+                                    {/* Global Search */}
+                                    <div className="relative w-full max-w-md hidden md:block">
+                                        <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Global Search (Events, Codes, Lines)..." 
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-1.5 text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Tabs */}
+                                <div className="flex bg-slate-800 p-1 rounded-lg border border-slate-700 shrink-0">
+                                    {[
+                                        { id: 'dashboard', icon: IconGrid, label: 'Dashboard' },
+                                        { id: 'analysis', icon: IconBarChart2, label: 'Timeline & Heatmap' },
+                                        { id: 'data', icon: IconFileText, label: 'Data Management' }
+                                    ].map(tab => (
+                                        <button 
+                                            key={tab.id}
+                                            onClick={() => setActiveTab(tab.id)}
+                                            className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                                                activeTab === tab.id 
+                                                ? 'bg-white text-slate-900 shadow' 
+                                                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                                            }`}
+                                        >
+                                            <tab.icon className="w-4 h-4" />
+                                            {tab.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </nav>
+
+                    <div className="max-w-[1600px] mx-auto px-4 py-6">
+                        
+                        {/* --- TAB: DASHBOARD --- */}
+                        {activeTab === 'dashboard' && (
+                            <div className="space-y-6 animate-fade-in">
+                                {/* KPIs */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <StatCard title="Total Downtime" value={`${stats.totalDuration.toFixed(0)} min`} icon={IconClock} colorClass="bg-indigo-100" colorText="text-indigo-600" />
+                                    <StatCard title="Total Events" value={stats.totalEvents} icon={IconZap} colorClass="bg-amber-100" colorText="text-amber-600" />
+                                    <StatCard title="MTTR" value={`${stats.avgDuration.toFixed(1)} min`} icon={IconRotateCcw} colorClass="bg-emerald-100" colorText="text-emerald-600" />
+                                </div>
+
+                                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                                    {/* Main Chart: Pareto */}
+                                    <div className="xl:col-span-2 glass-panel p-6 rounded-xl bg-white">
+                                        <h3 className="text-lg font-bold text-slate-800 mb-1">Downtime Drivers (Pareto)</h3>
+                                        <p className="text-sm text-slate-500 mb-6">Top contributors to production loss by duration</p>
+                                        <div className="h-[500px]">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={stats.paretoData.slice(0, 15)} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 5 }}>
+                                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                                                    <XAxis type="number" hide />
+                                                    <YAxis type="category" dataKey="name" width={280} tick={{fontSize: 11, fill: '#64748b', fontWeight: 500}} interval={0} />
+                                                    <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}} formatter={(value) => [`${value.toFixed(1)} min`, 'Duration']} />
+                                                    <Bar dataKey="duration" radius={[0, 4, 4, 0]} barSize={24}>
+                                                        {stats.paretoData.slice(0, 15).map((entry, index) => (
+                                                            <Cell key={`cell-${index}`} fill={index < 3 ? '#4f46e5' : '#94a3b8'} />
+                                                        ))}
+                                                        <LabelList dataKey="duration" position="right" formatter={(val) => `${val.toFixed(0)}m`} style={{fontSize: '11px', fill: '#64748b', fontWeight: 'bold'}} />
+                                                    </Bar>
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+
+                                    {/* Event Log Side Panel */}
+                                    <div className="glass-panel p-0 rounded-xl bg-white flex flex-col h-[600px]">
+                                        <div className="p-4 border-b border-slate-100">
+                                            <h3 className="text-lg font-bold text-slate-800">Downtime Event Log</h3>
+                                            <div className="text-xs text-slate-500">Most recent machine stops</div>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
+                                            {filteredData.slice(0, 50).map((row) => (
+                                                <div key={row.id} className="p-3 rounded-lg border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/30 transition-colors group">
+                                                    <div className="flex justify-between items-start mb-1">
+                                                        <span className="font-mono text-xs text-slate-400">{row.startTime}</span>
+                                                        <span className={`text-[10px] px-1.5 rounded font-bold ${row.line.includes('A') ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
+                                                            {row.line}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-sm font-semibold text-slate-700 leading-tight mb-1">{row.description}</div>
+                                                    <div className="flex justify-between items-center text-xs">
+                                                        <span className="text-slate-400 font-mono">{row.eventCode}</span>
+                                                        <span className="font-bold text-indigo-600">{row.durationRaw}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* --- TAB: TIMELINE & ANALYSIS --- */}
+                        {activeTab === 'analysis' && (
+                            <div className="space-y-6 animate-fade-in">
+                                <div className="glass-panel p-6 rounded-xl bg-white">
+                                    <h3 className="text-lg font-bold text-slate-800 mb-1">Gantt Timeline Visualization</h3>
+                                    <p className="text-sm text-slate-500 mb-6">Visual representation of stops across the shift. Red blocks indicate stops > 30 mins.</p>
+                                    <TimelineChart data={filteredData} />
+                                </div>
+
+                                <div className="glass-panel p-6 rounded-xl bg-white">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <div>
+                                            <h3 className="text-lg font-bold text-slate-800">24-Hour Intensity Heatmap</h3>
+                                            <p className="text-sm text-slate-500">Identify high-failure time windows</p>
+                                        </div>
+                                        <div className="flex bg-slate-100 p-1 rounded-lg">
+                                            <button onClick={() => setHeatmapMetric('count')} className={`px-4 py-1 text-xs font-bold rounded-md transition-all ${heatmapMetric === 'count' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}>Frequency</button>
+                                            <button onClick={() => setHeatmapMetric('duration')} className={`px-4 py-1 text-xs font-bold rounded-md transition-all ${heatmapMetric === 'duration' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}>Duration</button>
+                                        </div>
+                                    </div>
+                                    <HeatmapGrid data={stats.hourData} type={heatmapMetric} />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* --- TAB: DATA MANAGEMENT (RAW LOGS) --- */}
+                        {activeTab === 'data' && (
+                            <div className="animate-fade-in space-y-6">
+                                {/* File Uploader Section */}
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                    <div className="glass-panel p-6 rounded-xl bg-white">
+                                        <h3 className="text-lg font-bold text-slate-800 mb-4">Import Log Files</h3>
+                                        <label className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-xl cursor-pointer transition-all ${isProcessing ? 'bg-slate-50 border-slate-300' : 'bg-indigo-50/50 border-indigo-200 hover:bg-indigo-50 hover:border-indigo-400'}`}>
+                                            <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
+                                                {isProcessing ? (
+                                                    <IconActivity className="w-10 h-10 text-indigo-400 animate-spin mb-3" />
+                                                ) : (
+                                                    <IconUpload className="w-10 h-10 text-indigo-500 mb-3" />
+                                                )}
+                                                <p className="text-sm font-semibold text-slate-700">{isProcessing ? 'Processing Data...' : 'Click to Upload CSV Files'}</p>
+                                                <p className="text-xs text-slate-500 mt-2">Supports multi-file upload. System will auto-detect "Line" column.</p>
+                                            </div>
+                                            <input type="file" multiple accept=".csv" onChange={handleFileUpload} className="hidden" disabled={isProcessing} />
+                                        </label>
+                                    </div>
+
+                                    <div className="lg:col-span-2 glass-panel p-6 rounded-xl bg-white flex flex-col">
+                                        <h3 className="text-lg font-bold text-slate-800 mb-4">Active File Registry</h3>
+                                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3">
+                                            {uploadedFiles.length === 0 ? (
+                                                <div className="text-center py-10 text-slate-400">No files loaded.</div>
+                                            ) : (
+                                                uploadedFiles.map(file => (
+                                                    <div key={file.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="bg-indigo-100 p-2 rounded text-indigo-600">
+                                                                <IconFileText className="w-5 h-5" />
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-sm font-bold text-slate-700">{file.name}</div>
+                                                                <div className="text-xs text-slate-400">{file.data.length} records • ID: {file.id}</div>
+                                                            </div>
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => removeFile(file.id)}
+                                                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                            title="Delete File"
+                                                        >
+                                                            <IconTrash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Raw Data Table Preview */}
+                                <div className="glass-panel p-0 rounded-xl bg-white overflow-hidden">
+                                    <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                                        <h3 className="text-lg font-bold text-slate-800">Consolidated Data Grid</h3>
+                                        <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-500">{filteredData.length} Rows Visible</span>
+                                    </div>
+                                    <div className="overflow-x-auto max-h-[500px] custom-scrollbar">
+                                        <table className="min-w-full divide-y divide-slate-200">
+                                            <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
+                                                <tr>
+                                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date/Time</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Line</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Description</th>
+                                                    <th className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Duration</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-slate-200">
+                                                {filteredData.slice(0, 200).map((row) => (
+                                                    <tr key={row.id} className="hover:bg-slate-50 transition-colors">
+                                                        <td className="px-6 py-3 whitespace-nowrap">
+                                                            <div className="text-sm font-medium text-slate-900">{row.date}</div>
+                                                            <div className="text-xs text-slate-400">{row.startTime}</div>
+                                                        </td>
+                                                        <td className="px-6 py-3 whitespace-nowrap">
+                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${row.line.includes('A') ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-800'}`}>
+                                                                {row.line}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-3">
+                                                            <div className="text-sm text-slate-700 max-w-md truncate" title={row.description}>{row.description}</div>
+                                                            <div className="text-xs text-slate-400 font-mono">{row.eventCode}</div>
+                                                        </td>
+                                                        <td className="px-6 py-3 whitespace-nowrap text-right text-sm font-bold text-slate-700">
+                                                            {row.durationRaw}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                  </div>
-                  <HeatmapGrid data={stats.hourData} type={heatmapMetric} />
-               </div>
-
-               {/* Pareto Frequency */}
-               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                   <div className="flex items-center justify-between mb-2">
-                     <SectionHeader title="Downtime Pareto" subtitle="Top 10 Downtime Drivers" />
-                   </div>
-                   <div className="h-80">
-                     <ResponsiveContainer width="100%" height="100%">
-                       <BarChart 
-                          data={stats.paretoData.slice(0, 10)} 
-                          layout="vertical"
-                          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                          onClick={(data) => {
-                            if (data && data.activePayload) handleBarClick(data.activePayload[0].payload);
-                          }}
-                       >
-                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                         <XAxis type="number" hide />
-                         <YAxis type="category" dataKey="name" width={200} tick={{fontSize: 10, fill: '#475569'}} interval={0} />
-                         <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px'}} formatter={(value) => [`${value.toFixed(1)} min`, 'Duration']} />
-                         <Bar dataKey="duration" radius={[0, 4, 4, 0]} barSize={20}>
-                            {stats.paretoData.slice(0, 10).map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={selectedEvent === entry.name ? '#f59e0b' : '#4f46e5'} className="cursor-pointer hover:opacity-80" />
-                            ))}
-                         </Bar>
-                       </BarChart>
-                     </ResponsiveContainer>
-                   </div>
-               </div>
-            </div>
-
-          </div>
-        ) : activeTab === 'data' && stats ? (
-          <div className="space-y-4">
-             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <input type="text" placeholder="Search logs..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" />
                 </div>
-                <div className="flex items-center gap-2 text-sm text-slate-500 font-semibold">{filteredData.length} records</div>
-             </div>
-             <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-start gap-2 text-sm text-blue-700">
-                <CheckCircle2 className="w-5 h-5 text-blue-500 shrink-0" />
-                <p>Dates automatically filled from previous rows.</p>
-             </div>
-             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-slate-200">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Time</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Line</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Description</th>
-                        <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Duration</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-slate-200">
-                      {filteredData.map((row) => (
-                        <tr key={row.id} className="hover:bg-slate-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                            <div className="flex items-center gap-2"><span className="font-medium text-indigo-700">{row.date}</span>{row.isFilled && <span className="text-[10px] bg-slate-100 text-slate-400 px-1 rounded border">filled</span>}</div>
-                            <div className="text-xs text-slate-400">{row.startTime}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{row.line}</td>
-                          <td className="px-6 py-4 text-sm text-slate-700 max-w-lg"><div className="truncate" title={row.description}>{row.description}</div></td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">{row.durationRaw}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-             </div>
-          </div>
-        ) : null}
-      </main>
-    </div>
-  );
-}
+            );
+        };
 
-const SectionHeader = ({ title, subtitle }) => (
-  <div className="mb-4">
-    <h2 className="text-lg font-bold text-slate-800">{title}</h2>
-    {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
-  </div>
-);
-
-
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
