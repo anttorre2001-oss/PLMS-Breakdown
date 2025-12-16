@@ -1,510 +1,1834 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PLMS Command Center</title>
-    
-    <!-- 1. Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 2. React Dependencies -->
-    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
-    
-    <!-- 3. Recharts -->
-    <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.js"></script>
-    
-    <!-- 4. Babel -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- 5. Confetti for Gamification -->
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+```
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- 6. Firebase (Modular via CDN) -->
-    <!-- We will import these in the module script below -->
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    <style>
-        /* Base Themes */
-        :root {
-            --bg-primary: #020617;
-            --bg-glass: rgba(15, 23, 42, 0.7);
-            --text-main: #f8fafc;
-            --accent: #6366f1;
-            --accent-glow: rgba(99, 102, 241, 0.5);
-        }
+    :root {
+        --bg-primary: #0a0a0f;
+        --bg-secondary: #111118;
+        --bg-card: rgba(18, 18, 26, 0.9);
+        --border: rgba(255, 255, 255, 0.08);
+        --text-primary: #f4f4f5;
+        --text-secondary: #a1a1aa;
+        --text-muted: #52525b;
+        --blue: #3b82f6;
+        --purple: #8b5cf6;
+        --green: #10b981;
+        --amber: #f59e0b;
+        --red: #ef4444;
+        --cyan: #06b6d4;
+        --pink: #ec4899;
+    }
 
-        body.theme-sea {
-            --bg-primary: #0c4a6e;
-            --bg-glass: rgba(12, 74, 110, 0.6);
-            --text-main: #f0f9ff;
-            --accent: #06b6d4;
-            --accent-glow: rgba(6, 182, 212, 0.5);
-            background-image: linear-gradient(to bottom right, #0c4a6e, #0f172a);
-        }
+    body {
+        font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        min-height: 100vh;
+        background-image: 
+            radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.12), transparent),
+            radial-gradient(ellipse 60% 40% at 100% 0%, rgba(139, 92, 246, 0.08), transparent);
+    }
 
-        body.theme-light {
-            --bg-primary: #f1f5f9;
-            --bg-glass: rgba(255, 255, 255, 0.8);
-            --text-main: #0f172a;
-            --accent: #2563eb;
-            --accent-glow: rgba(37, 99, 235, 0.3);
-            background-image: linear-gradient(to bottom right, #e2e8f0, #f8fafc);
-            color: #0f172a;
-        }
+    body.light-theme {
+        --bg-primary: #f8fafc;
+        --bg-secondary: #f1f5f9;
+        --bg-card: rgba(255, 255, 255, 0.95);
+        --border: rgba(0, 0, 0, 0.08);
+        --text-primary: #0f172a;
+        --text-secondary: #475569;
+        --text-muted: #94a3b8;
+        background-image: none;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    }
 
-        /* Defaults (Cyber Dark) */
-        body { 
-            background-color: var(--bg-primary); 
-            color: var(--text-main); 
-            font-family: 'Inter', sans-serif; 
-            background-image: 
-                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
-                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
-            background-attachment: fixed;
-            transition: background 0.5s ease, color 0.5s ease;
-        }
+    body.tv-mode {
+        overflow: hidden;
+    }
 
-        /* Glassmorphism */
-        .glass-panel {
-            background: var(--bg-glass);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-            transition: background 0.3s ease;
-        }
-        body.theme-light .glass-panel {
-            background: rgba(255, 255, 255, 0.8);
-            border: 1px solid rgba(0,0,0,0.05);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-            color: #0f172a;
-        }
+    .container { max-width: 1600px; margin: 0 auto; padding: 16px; }
+    .tv-mode .container { max-width: 100%; padding: 20px; }
 
-        .glass-button {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: inherit;
-            transition: all 0.2s ease;
-        }
-        body.theme-light .glass-button {
-            background: white;
-            border-color: #cbd5e1;
-            color: #475569;
-        }
-        .glass-button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
+    /* Header */
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+    }
 
-        /* Ticker Animation */
-        @keyframes ticker {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
-        }
-        .ticker-wrap {
-            overflow: hidden;
-            white-space: nowrap;
-        }
-        .ticker-content {
-            display: inline-block;
-            animation: ticker 30s linear infinite;
-        }
+    .tv-mode .header { display: none; }
 
-        /* Utilities */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
-        .tv-mode-hide { display: none !important; }
-    </style>
+    .header-left { display: flex; align-items: center; gap: 12px; }
+
+    .logo {
+        width: 40px; height: 40px;
+        background: linear-gradient(135deg, var(--blue), var(--purple));
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 16px;
+    }
+
+    .title { font-size: 20px; font-weight: 700; }
+    .subtitle { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+
+    /* Buttons */
+    .btn {
+        padding: 7px 14px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 12px;
+        cursor: pointer;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        transition: all 0.2s;
+        font-family: inherit;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--blue), var(--purple));
+        color: white;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
+
+    .btn-ghost {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-secondary);
+        border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: rgba(255, 255, 255, 0.1); color: var(--text-primary); }
+
+    .btn-success { background: var(--green); color: white; }
+    .btn-danger { background: var(--red); color: white; }
+
+    .btn-icon {
+        padding: 7px;
+        min-width: 32px;
+        justify-content: center;
+    }
+
+    /* Cards */
+    .card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .card-header {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-title { font-weight: 600; font-size: 13px; color: var(--text-secondary); }
+    .card-body { padding: 14px; }
+
+    /* Tabs */
+    .tabs {
+        display: flex;
+        gap: 3px;
+        background: rgba(255, 255, 255, 0.03);
+        padding: 3px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        flex-wrap: wrap;
+    }
+
+    .tab {
+        padding: 6px 14px;
+        border-radius: 5px;
+        font-weight: 600;
+        font-size: 12px;
+        cursor: pointer;
+        color: var(--text-muted);
+        background: transparent;
+        border: none;
+        transition: all 0.2s;
+        font-family: inherit;
+    }
+
+    .tab:hover { color: var(--text-secondary); }
+    .tab.active { background: linear-gradient(135deg, var(--blue), var(--purple)); color: white; }
+
+    /* Filters */
+    .filters-bar {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+    }
+
+    .tv-mode .filters-bar { margin-bottom: 20px; }
+
+    .filter-group { display: flex; align-items: center; gap: 5px; }
+    .filter-label { font-size: 11px; color: var(--text-muted); }
+
+    input[type="date"], select, .input {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 5px 8px;
+        color: var(--text-primary);
+        font-size: 11px;
+        font-family: inherit;
+    }
+
+    .light-theme input[type="date"], .light-theme select, .light-theme .input {
+        background: white;
+        border-color: #e2e8f0;
+    }
+
+    input:focus, select:focus, .input:focus { outline: none; border-color: var(--blue); }
+
+    .date-presets { display: flex; gap: 4px; }
+    .date-preset {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        font-family: inherit;
+        transition: all 0.2s;
+    }
+    .date-preset:hover { background: rgba(255, 255, 255, 0.1); color: var(--text-secondary); }
+    .date-preset.active { background: var(--blue); color: white; border-color: var(--blue); }
+
+    /* KPI Grid */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+    .tv-mode .kpi-grid { grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
+
+    .kpi-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px;
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+    .kpi-card.clickable { cursor: pointer; }
+
+    .kpi-label {
+        font-size: 9px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-muted);
+        margin-bottom: 4px;
+    }
+
+    .kpi-value { font-size: 22px; font-weight: 800; line-height: 1.1; }
+    .tv-mode .kpi-value { font-size: 28px; }
+    .kpi-sub { font-size: 9px; color: var(--text-muted); margin-top: 2px; }
+
+    .kpi-trend {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        font-size: 10px;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-top: 4px;
+    }
+
+    .kpi-trend.up { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+    .kpi-trend.down { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+
+    .kpi-value.green { color: var(--green); }
+    .kpi-value.red { color: var(--red); }
+    .kpi-value.blue { color: var(--blue); }
+    .kpi-value.amber { color: var(--amber); }
+    .kpi-value.purple { color: var(--purple); }
+    .kpi-value.cyan { color: var(--cyan); }
+
+    .kpi-sparkline {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 30px;
+        opacity: 0.3;
+    }
+
+    .progress-bar {
+        height: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 6px;
+    }
+
+    .progress-fill { height: 100%; border-radius: 2px; transition: width 0.5s; }
+    .progress-fill.green { background: var(--green); }
+    .progress-fill.amber { background: var(--amber); }
+    .progress-fill.red { background: var(--red); }
+
+    /* Main Grid */
+    .main-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 12px;
+    }
+
+    .tv-mode .main-grid { grid-template-columns: 2fr 1fr; gap: 20px; }
+
+    @media (max-width: 1200px) {
+        .main-grid { grid-template-columns: 1fr; }
+    }
+
+    .full-width { grid-column: 1 / -1; }
+
+    /* Pareto Chart */
+    .pareto-container { position: relative; }
+
+    .pareto-bars { display: flex; flex-direction: column; gap: 8px; }
+
+    .pareto-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 6px;
+        transition: background 0.2s;
+    }
+
+    .pareto-item:hover { background: rgba(255, 255, 255, 0.03); }
+    .pareto-item.selected { background: rgba(59, 130, 246, 0.1); }
+
+    .pareto-rank {
+        width: 22px; height: 22px;
+        border-radius: 5px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 10px; font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    .pareto-rank.rank-1 { background: rgba(239, 68, 68, 0.2); color: var(--red); }
+    .pareto-rank.rank-2 { background: rgba(245, 158, 11, 0.2); color: var(--amber); }
+    .pareto-rank.rank-3 { background: rgba(139, 92, 246, 0.2); color: var(--purple); }
+    .pareto-rank.default { background: rgba(100, 116, 139, 0.15); color: var(--text-muted); }
+
+    .pareto-info { flex: 1; min-width: 0; }
+    .pareto-event {
+        font-size: 11px; font-weight: 500; color: var(--text-primary);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .pareto-meta { font-size: 9px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+
+    .pareto-bar-wrapper { flex: 1; min-width: 100px; }
+
+    .pareto-bar-container {
+        height: 18px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .pareto-bar { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+
+    .pareto-bar.casepacker { background: linear-gradient(90deg, #f59e0b, rgba(245, 158, 11, 0.5)); }
+    .pareto-bar.capper { background: linear-gradient(90deg, #3b82f6, rgba(59, 130, 246, 0.5)); }
+    .pareto-bar.e80 { background: linear-gradient(90deg, #8b5cf6, rgba(139, 92, 246, 0.5)); }
+    .pareto-bar.lightcurtain { background: linear-gradient(90deg, #06b6d4, rgba(6, 182, 212, 0.5)); }
+    .pareto-bar.wrapper { background: linear-gradient(90deg, #ec4899, rgba(236, 72, 153, 0.5)); }
+    .pareto-bar.accumulator { background: linear-gradient(90deg, #10b981, rgba(16, 185, 129, 0.5)); }
+    .pareto-bar.processor { background: linear-gradient(90deg, #ef4444, rgba(239, 68, 68, 0.5)); }
+    .pareto-bar.filler { background: linear-gradient(90deg, #6366f1, rgba(99, 102, 241, 0.5)); }
+    .pareto-bar.other { background: linear-gradient(90deg, #64748b, rgba(100, 116, 139, 0.5)); }
+
+    .pareto-cumulative-line {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--amber);
+        z-index: 5;
+    }
+
+    .pareto-80-marker {
+        position: absolute;
+        right: 20%;
+        top: 0;
+        bottom: 0;
+        border-left: 2px dashed var(--red);
+        opacity: 0.5;
+    }
+
+    .pareto-80-label {
+        position: absolute;
+        right: 20%;
+        top: -18px;
+        transform: translateX(50%);
+        font-size: 9px;
+        color: var(--red);
+        font-weight: 600;
+    }
+
+    .pareto-value { font-size: 11px; font-weight: 700; width: 45px; text-align: right; flex-shrink: 0; }
+    .pareto-cumulative { font-size: 9px; color: var(--text-muted); width: 35px; text-align: right; flex-shrink: 0; }
+    .pareto-cumulative.past-80 { color: var(--red); font-weight: 600; }
+
+    /* Equipment Badge */
+    .equip-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 8px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .equip-badge.casepacker { background: rgba(245, 158, 11, 0.2); color: var(--amber); }
+    .equip-badge.capper { background: rgba(59, 130, 246, 0.2); color: var(--blue); }
+    .equip-badge.e80 { background: rgba(139, 92, 246, 0.2); color: var(--purple); }
+    .equip-badge.lightcurtain { background: rgba(6, 182, 212, 0.2); color: var(--cyan); }
+    .equip-badge.wrapper { background: rgba(236, 72, 153, 0.2); color: var(--pink); }
+    .equip-badge.accumulator { background: rgba(16, 185, 129, 0.2); color: var(--green); }
+    .equip-badge.processor { background: rgba(239, 68, 68, 0.2); color: var(--red); }
+    .equip-badge.filler { background: rgba(99, 102, 241, 0.2); color: #6366f1; }
+    .equip-badge.other { background: rgba(100, 116, 139, 0.2); color: #64748b; }
+
+    /* Equipment Summary */
+    .equip-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+
+    .equip-item {
+        display: flex; align-items: center; gap: 8px;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+    }
+
+    .equip-item:hover { background: rgba(255, 255, 255, 0.05); }
+    .equip-item.selected { border-color: var(--blue); background: rgba(59, 130, 246, 0.1); }
+
+    .equip-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+    .equip-info { flex: 1; }
+    .equip-name { font-size: 11px; color: var(--text-secondary); }
+    .equip-count { font-size: 9px; color: var(--text-muted); }
+    .equip-value { font-size: 12px; font-weight: 700; }
+
+    /* Trend Chart */
+    .trend-chart {
+        height: 180px;
+        display: flex;
+        align-items: flex-end;
+        gap: 4px;
+        padding-top: 20px;
+    }
+
+    .trend-bar-group {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .trend-bar {
+        width: 100%;
+        max-width: 30px;
+        border-radius: 3px 3px 0 0;
+        transition: height 0.3s ease;
+        cursor: pointer;
+    }
+
+    .trend-bar:hover { opacity: 0.8; }
+
+    .trend-label {
+        font-size: 9px;
+        color: var(--text-muted);
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    /* Timeline */
+    .timeline-container { position: relative; padding: 10px 0; }
+
+    .timeline-hours {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        padding: 0 2px;
+    }
+
+    .timeline-hour { font-size: 9px; color: var(--text-muted); }
+
+    .timeline-track {
+        height: 24px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 4px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .timeline-event {
+        position: absolute;
+        top: 2px;
+        bottom: 2px;
+        border-radius: 3px;
+        cursor: pointer;
+        transition: opacity 0.2s;
+        min-width: 3px;
+    }
+
+    .timeline-event:hover { opacity: 0.8; }
+
+    /* Table */
+    .data-table { width: 100%; border-collapse: collapse; }
+
+    .data-table th {
+        text-align: left;
+        padding: 8px 10px;
+        font-size: 9px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-muted);
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .data-table th:hover { color: var(--text-secondary); }
+
+    .data-table td {
+        padding: 8px 10px;
+        font-size: 11px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .data-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+    .table-container { max-height: 350px; overflow: auto; }
+
+    .line-badge {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 9px;
+        font-weight: 600;
+    }
+
+    .line-badge.line-a { background: rgba(59, 130, 246, 0.2); color: var(--blue); }
+    .line-badge.line-b { background: rgba(16, 185, 129, 0.2); color: var(--green); }
+    .line-badge.line-c { background: rgba(245, 158, 11, 0.2); color: var(--amber); }
+    .line-badge.line-d { background: rgba(236, 72, 153, 0.2); color: var(--pink); }
+
+    .duration-value { font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+    .duration-value.high { color: var(--red); }
+    .duration-value.medium { color: var(--amber); }
+
+    /* Modal */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .modal {
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        width: 90%;
+        max-width: 500px;
+        max-height: 85vh;
+        overflow: hidden;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-title { font-weight: 700; font-size: 15px; }
+
+    .modal-close {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 18px;
+        padding: 4px 8px;
+        border-radius: 6px;
+    }
+
+    .modal-close:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+
+    .modal-body { padding: 18px; max-height: 60vh; overflow-y: auto; }
+
+    .drop-zone {
+        border: 2px dashed var(--border);
+        border-radius: 12px;
+        padding: 30px 20px;
+        text-align: center;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.02);
+        margin-bottom: 14px;
+        transition: all 0.3s;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+        border-color: var(--blue);
+        background: rgba(59, 130, 246, 0.05);
+    }
+
+    .drop-zone-icon { font-size: 28px; margin-bottom: 8px; opacity: 0.5; }
+    .drop-zone h3 { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+    .drop-zone p { font-size: 10px; color: var(--text-muted); }
+
+    .modal-divider {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 14px 0;
+        color: var(--text-muted);
+        font-size: 10px;
+    }
+
+    .modal-divider::before, .modal-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+    }
+
+    .paste-area {
+        width: 100%;
+        min-height: 100px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        resize: vertical;
+        margin-bottom: 10px;
+    }
+
+    .paste-area:focus { outline: none; border-color: var(--blue); }
+    .paste-area::placeholder { color: var(--text-muted); }
+
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* Recurring Badge */
+    .recurring-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        padding: 2px 5px;
+        border-radius: 4px;
+        font-size: 9px;
+        font-weight: 600;
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--red);
+    }
+
+    /* TV Mode Toggle */
+    .tv-exit {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 100;
+    }
+
+    /* Tooltip */
+    .tooltip {
+        position: absolute;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 11px;
+        z-index: 1000;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        pointer-events: none;
+        max-width: 250px;
+    }
+
+    .tooltip-title { font-weight: 600; margin-bottom: 4px; }
+    .tooltip-row { display: flex; justify-content: space-between; gap: 12px; color: var(--text-muted); }
+    .tooltip-value { color: var(--text-primary); font-weight: 500; }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+
+    .hidden { display: none !important; }
+
+    /* Status Indicator */
+    .status-bar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 6px;
+        font-size: 11px;
+        color: var(--text-muted);
+    }
+
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .status-dot.ready { background: var(--green); }
+    .status-dot.empty { background: var(--amber); }
+
+    /* View toggle */
+    .view-tabs {
+        display: flex;
+        gap: 2px;
+        background: rgba(255, 255, 255, 0.03);
+        padding: 2px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+    }
+
+    .view-tab {
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        color: var(--text-muted);
+        background: transparent;
+        border: none;
+        font-family: inherit;
+    }
+
+    .view-tab:hover { color: var(--text-secondary); }
+    .view-tab.active { background: rgba(59, 130, 246, 0.2); color: var(--blue); }
+</style>
+```
+
 </head>
 <body>
-    <div id="root"></div>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">📊</div>
+                <div>
+                    <h1 class="title">PLMS Command Center</h1>
+                    <p class="subtitle">Production Loss Management</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="status-bar" id="statusBar">
+                    <span class="status-dot ready"></span>
+                    <span>Loading...</span>
+                </div>
+                <button class="btn btn-ghost btn-icon" onclick="toggleTheme()" title="Toggle theme">
+                    🌓
+                </button>
+                <button class="btn btn-ghost" onclick="enterTVMode()" title="TV Mode">
+                    📺 TV
+                </button>
+                <button class="btn btn-primary" onclick="openImportModal()">
+                    📁 Import
+                </button>
+                <button class="btn btn-ghost" id="exportBtn" onclick="exportData()">
+                    📥 Export
+                </button>
+            </div>
+        </header>
 
-    <!-- Main Application Script -->
-    <script type="text/babel" data-type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+```
+    <!-- Filters -->
+    <div class="filters-bar" id="filtersBar">
+        <div id="lineTabs" class="tabs"></div>
 
-        // --- 1. Firebase Configuration & Utils ---
-        const firebaseConfig = JSON.parse('{"apiKey":"","authDomain":"plms-demo.firebaseapp.com","projectId":"plms-demo","storageBucket":"plms-demo.appspot.com","messagingSenderId":"123456789","appId":"1:123456789:web:abcdef"}'); // DUMMY CONFIG FOR TEMPLATE - The environment injects real one usually.
-        // NOTE: In this restricted environment, I will use a mock implementation if config is missing, 
-        // but for the user's generated file, I will structure it to work with their provided config if they have one, 
-        // or default to local storage fallback if firebase fails.
-        
-        // --- MOCK FIREBASE FOR DEMO (Since we can't inject real keys here) ---
-        // In a real deployment, you would replace this Mock logic with real Firebase calls.
-        const useMockFirebase = true; 
+        <div class="date-presets" id="datePresets">
+            <button class="date-preset" data-preset="7d">7 Days</button>
+            <button class="date-preset" data-preset="14d">14 Days</button>
+            <button class="date-preset" data-preset="30d">30 Days</button>
+            <button class="date-preset active" data-preset="all">All</button>
+        </div>
 
-        // --- React Imports ---
-        const { useState, useMemo, useEffect, useRef, createContext, useContext } = React;
-        const { ResponsiveContainer, ComposedChart, Bar, Line, Area, AreaChart, XAxis, YAxis, Tooltip, CartesianGrid, Legend, PieChart, Pie, Cell } = Recharts;
+        <div class="filter-group">
+            <input type="date" id="startDate" onchange="applyFilters()">
+            <span class="filter-label">to</span>
+            <input type="date" id="endDate" onchange="applyFilters()">
+        </div>
 
-        // --- Helpers ---
-        const generateRoomCode = () => Math.random().toString(36).substring(2, 6).toUpperCase();
-        const round = (n, dp = 2) => Number(n.toFixed(dp));
-        const fmtMoney = (n) => n.toLocaleString(undefined, { style: "currency", currency: "USD" });
-        const fmtMin = (min) => `${Math.round(min)}m`;
-        
-        // --- Icons ---
-        const Icons = {
-            Cloud: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.5 19c0-3.037-2.463-5.5-5.5-5.5S6.5 15.963 6.5 19"/><path d="M19 19V9l-7-5-7 5v10l7 5 7-5Z" opacity="0"/></svg>, // Simplified
-            Wifi: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>,
-            Tv: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>,
-            Trophy: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>,
-            Zap: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
-            Moon: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>,
-            Sun: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></svg>,
-            Settings: (p) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>,
-        };
+        <div class="filter-group" id="equipmentFilter">
+            <select id="equipmentSelect" onchange="applyFilters()">
+                <option value="all">All Equipment</option>
+            </select>
+        </div>
 
-        // --- Demo Data ---
-        const DEMO_DATA = "Date\tLine\tEvent\tDuration\n2025-10-01\tLine A\tMotor Fault\t45\n2025-10-01\tLine A\tJam\t15\n2025-10-02\tLine B\tSensor\t120\n2025-10-02\tLine C\tNo Material\t200\n2025-10-03\tLine A\tCleaning\t30\n2025-10-04\tLine D\tE-Stop\t10";
+        <div class="view-tabs">
+            <button class="view-tab active" data-view="dashboard" onclick="setView('dashboard')">Dashboard</button>
+            <button class="view-tab" data-view="pareto" onclick="setView('pareto')">Pareto</button>
+            <button class="view-tab" data-view="trend" onclick="setView('trend')">Trend</button>
+            <button class="view-tab" data-view="table" onclick="setView('table')">Table</button>
+        </div>
 
-        // --- Logic Components ---
-        
-        function App() {
-            // State
-            const [rawData, setRawData] = useState("");
-            const [data, setData] = useState([]);
-            const [theme, setTheme] = useState("cyber"); // cyber, sea, light
-            const [tvMode, setTvMode] = useState(false);
-            const [sessionCode, setSessionCode] = useState("");
-            const [isSyncing, setIsSyncing] = useState(false);
-            const [activeTab, setActiveTab] = useState("Line A");
-            const [costRates, setCostRates] = useState({ "LINE A": 1003.5, "LINE B": 1003.5, "LINE C": 1299.33, "LINE D": 1299.33 });
-            
-            // Effect: Apply Theme
-            useEffect(() => {
-                document.body.className = `theme-${theme}`;
-            }, [theme]);
+        <button class="btn btn-ghost" onclick="clearFilters()" style="margin-left:auto;">
+            ✕ Clear
+        </button>
+    </div>
 
-            // Parsing Logic (Simplified for brevity)
-            const parseData = (text) => {
-                const lines = text.trim().split('\n');
-                if (lines.length < 2) return [];
-                // Simple parser assuming TSV/CSV
-                const res = [];
-                const headers = lines[0].toLowerCase();
-                const isTsv = headers.includes('\t');
-                const sep = isTsv ? '\t' : ',';
-                
-                for(let i=1; i<lines.length; i++) {
-                    const cols = lines[i].split(sep);
-                    if(cols.length < 4) continue;
-                    // Detect columns roughly: Date=0, Line=1, Event=2, Duration=3 (Adjust based on user input usually)
-                    // For demo, we assume standard order or try to detect
-                    let date = cols[0], line = cols[1], event = cols[2], dur = parseFloat(cols[3]);
-                    
-                    // Basic normalization
-                    if(line && line.toUpperCase().includes('A')) line = "LINE A";
-                    else if(line && line.toUpperCase().includes('B')) line = "LINE B";
-                    else if(line && line.toUpperCase().includes('C')) line = "LINE C";
-                    else if(line && line.toUpperCase().includes('D')) line = "LINE D";
-                    else line = "UNKNOWN";
+    <!-- Main Content -->
+    <div id="mainContent">
+        <!-- KPIs -->
+        <div class="kpi-grid" id="kpiGrid"></div>
 
-                    let cat = "Other";
-                    const e = event.toLowerCase();
-                    if(e.includes('motor') || e.includes('sensor') || e.includes('fuse')) cat = "Electrical";
-                    else if(e.includes('jam') || e.includes('belt') || e.includes('break')) cat = "Mechanical";
-                    else if(e.includes('clean') || e.includes('material')) cat = "Operational";
-
-                    res.push({
-                        id: i, date, line, event, duration: dur || 0, category: cat
-                    });
-                }
-                return res;
-            };
-
-            const handleAnalyze = (text) => {
-                const parsed = parseData(text);
-                setData(parsed);
-                setRawData(text);
-                if(parsed.length > 0) {
-                    // Trigger confetti
-                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-                    // Save to cloud if session active
-                    if(sessionCode && !useMockFirebase) {
-                        // Real firebase logic would go here: setDoc(...)
-                    } else if (sessionCode) {
-                        // Mock sync
-                        localStorage.setItem(`plms_${sessionCode}`, text);
-                    }
-                }
-            };
-
-            // Cloud Sync Simulation
-            const joinSession = () => {
-                const code = prompt("Enter Room Code (or leave empty to create new):");
-                if (code) {
-                    setSessionCode(code);
-                    setIsSyncing(true);
-                    // Mock retrieve
-                    const saved = localStorage.getItem(`plms_${code}`);
-                    if(saved) handleAnalyze(saved);
-                } else {
-                    const newCode = generateRoomCode();
-                    setSessionCode(newCode);
-                    setIsSyncing(true);
-                    alert(`Room Created! Code: ${newCode}\nShare this to sync.`);
-                }
-            };
-
-            // Data Filters
-            const filteredData = useMemo(() => {
-                return data.filter(d => d.line === activeTab.toUpperCase());
-            }, [data, activeTab]);
-
-            // KPIs
-            const kpis = useMemo(() => {
-                const totalDur = filteredData.reduce((acc, c) => acc + c.duration, 0);
-                const cost = (totalDur / 60) * (costRates[activeTab.toUpperCase()] || 1000);
-                const count = filteredData.length;
-                const mttr = count ? totalDur / count : 0;
-                
-                // Gamification Score (0-100)
-                // Arbitrary formula: 100 - (MTTR/2) - (stops/5)
-                let score = 100 - (mttr / 2) - (count / 5);
-                if (score < 0) score = 0;
-                if (score > 100) score = 100;
-
-                return { totalDur, cost, count, mttr, score };
-            }, [filteredData, activeTab]);
-
-            // Badges
-            const badges = useMemo(() => {
-                const b = [];
-                if (kpis.mttr > 0 && kpis.mttr < 30) b.push({ icon: "⚡", label: "Quick Fixer", color: "text-yellow-400" });
-                if (kpis.score > 85) b.push({ icon: "🏆", label: "Elite Line", color: "text-purple-400" });
-                if (kpis.count === 0 && data.length > 0) b.push({ icon: "✨", label: "Clean Run", color: "text-emerald-400" });
-                return b;
-            }, [kpis]);
-
-            // Ticker Items
-            const tickerItems = useMemo(() => {
-                if (data.length === 0) return ["Waiting for data...", "PLMS Command Center Ready"];
-                const topErrors = [...data].sort((a,b) => b.duration - a.duration).slice(0, 3);
-                return topErrors.map(e => `ALERT: ${e.line} - ${e.event} (${e.duration}m)`);
-            }, [data]);
-
-            return (
-                <div className={`min-h-screen pb-10 transition-all ${tvMode ? 'p-0 overflow-hidden' : 'p-4 md:p-8'}`}>
-                    
-                    {/* TICKER TAPE */}
-                    <div className="fixed top-0 left-0 w-full bg-slate-950/80 backdrop-blur-md border-b border-white/10 h-8 flex items-center z-50 overflow-hidden">
-                        <div className="bg-indigo-600 px-3 h-full flex items-center text-xs font-bold uppercase tracking-wider text-white z-10">Live Feed</div>
-                        <div className="ticker-wrap w-full">
-                            <div className="ticker-content text-xs font-mono text-indigo-200">
-                                {tickerItems.map((t, i) => <span key={i} className="mx-8">:: {t}</span>)}
-                            </div>
+        <!-- Dashboard View -->
+        <div id="dashboardView">
+            <div class="main-grid">
+                <!-- Pareto -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Top Loss Drivers</span>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <span id="paretoFilterLabel" class="equip-badge other" style="display:none;"></span>
+                            <button class="btn btn-ghost" style="padding:4px 8px;font-size:10px;" onclick="clearEquipmentFilter()">Show All</button>
                         </div>
                     </div>
-
-                    <div className="max-w-[1800px] mx-auto mt-10">
-                        
-                        {/* HEADER & CONTROLS (Hidden in TV Mode) */}
-                        {!tvMode && (
-                            <div className="flex flex-col xl:flex-row justify-between items-end gap-6 mb-10 animate-in">
-                                <div>
-                                    <h1 className="text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400 drop-shadow-sm mb-2">
-                                        PLMS <span className="text-white/20 font-light">Command</span>
-                                    </h1>
-                                    <div className="flex items-center gap-4 text-sm text-slate-400">
-                                        <button onClick={joinSession} className={`flex items-center gap-2 px-3 py-1 rounded-full border transition-all ${isSyncing ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'hover:bg-white/5 border-white/10'}`}>
-                                            <Icons.Wifi className={`w-3 h-3 ${isSyncing ? 'animate-pulse' : ''}`} />
-                                            {sessionCode ? `Synced: ${sessionCode}` : 'Offline Mode'}
-                                        </button>
-                                        <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full">
-                                            <span>Theme:</span>
-                                            <button onClick={() => setTheme('cyber')} className={`w-3 h-3 rounded-full bg-indigo-500 ${theme==='cyber'?'ring-2 ring-white':''}`}></button>
-                                            <button onClick={() => setTheme('sea')} className={`w-3 h-3 rounded-full bg-cyan-600 ${theme==='sea'?'ring-2 ring-white':''}`}></button>
-                                            <button onClick={() => setTheme('light')} className={`w-3 h-3 rounded-full bg-slate-200 ${theme==='light'?'ring-2 ring-white':''}`}></button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-wrap gap-3">
-                                    <button onClick={() => handleAnalyze(DEMO_DATA)} className="glass-button px-5 py-3 rounded-xl font-semibold flex items-center gap-2">
-                                        <Icons.Zap className="w-4 h-4 text-yellow-400" /> Demo
-                                    </button>
-                                    <button onClick={() => { 
-                                        const t = prompt("Paste Data:");
-                                        if(t) handleAnalyze(t);
-                                    }} className="glass-button px-5 py-3 rounded-xl font-semibold">Paste Data</button>
-                                    <button onClick={() => setTvMode(true)} className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-3 rounded-xl font-semibold shadow-lg shadow-indigo-500/30 flex items-center gap-2">
-                                        <Icons.Tv className="w-4 h-4" /> TV Mode
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* TV MODE EXIT BUTTON */}
-                        {tvMode && (
-                            <button onClick={() => setTvMode(false)} className="fixed bottom-4 right-4 bg-red-500/20 hover:bg-red-500 text-red-200 hover:text-white p-2 rounded-full z-50 transition-all">
-                                <Icons.X className="w-6 h-6" />
-                            </button>
-                        )}
-
-                        {/* LINE SELECTION TABS */}
-                        <div className="flex gap-4 mb-8 overflow-x-auto pb-2">
-                            {["Line A", "Line B", "Line C", "Line D"].map(l => (
-                                <button 
-                                    key={l}
-                                    onClick={() => setActiveTab(l)}
-                                    className={`px-8 py-4 rounded-2xl font-bold text-lg transition-all ${activeTab === l ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 scale-105' : 'glass-panel text-slate-400 hover:bg-white/10'}`}
-                                >
-                                    {l}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* KPI GRID */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6 mb-8">
-                            {/* Score Card (Gamified) */}
-                            <div className="glass-panel p-6 rounded-2xl xl:col-span-1 relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                    <Icons.Trophy className="w-24 h-24" />
-                                </div>
-                                <p className="text-slate-400 text-sm font-bold uppercase tracking-wider">Efficiency Score</p>
-                                <div className="flex items-end gap-2 mt-2">
-                                    <span className={`text-5xl font-black ${kpis.score > 80 ? 'text-emerald-400' : kpis.score > 50 ? 'text-yellow-400' : 'text-red-400'}`}>
-                                        {Math.round(kpis.score)}
-                                    </span>
-                                    <span className="text-sm text-slate-500 mb-2">/ 100</span>
-                                </div>
-                                <div className="mt-4 flex gap-2">
-                                    {badges.map((b, i) => (
-                                        <span key={i} className={`text-xs bg-white/5 border border-white/10 px-2 py-1 rounded-full flex items-center gap-1 ${b.color}`}>
-                                            {b.icon} {b.label}
-                                        </span>
-                                    ))}
-                                    {badges.length === 0 && <span className="text-xs text-slate-600 italic">No badges earned</span>}
-                                </div>
-                            </div>
-
-                            <KPICard title="Total Loss" value={fmtMoney(kpis.cost)} sub={`$${costRates[activeTab.toUpperCase()]}/hr`} color="text-red-400" />
-                            <KPICard title="Downtime" value={fmtHoursFromMin(kpis.totalDur)} sub={`${fmtMin(kpis.totalDur)} total`} color="text-indigo-400" />
-                            <KPICard title="Stops" value={kpis.count} sub="Events" color="text-blue-400" />
-                            <KPICard title="MTTR" value={fmtMin(kpis.mttr)} sub="Avg Repair Time" color="text-amber-400" />
-                        </div>
-
-                        {/* MAIN DASHBOARD CONTENT */}
-                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 h-auto xl:h-[600px]">
-                            
-                            {/* Left: Charts (2/3 width) */}
-                            <div className="xl:col-span-2 flex flex-col gap-6">
-                                {/* Pareto */}
-                                <div className="glass-panel p-6 rounded-2xl flex-1 min-h-[300px]">
-                                    <div className="flex justify-between mb-4">
-                                        <h3 className="text-xl font-bold text-slate-200">Loss Drivers (Pareto)</h3>
-                                        <span className="text-xs bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded">By Duration</span>
-                                    </div>
-                                    <ResponsiveContainer width="100%" height="85%">
-                                        <ComposedChart data={filteredData.sort((a,b)=>b.duration-a.duration).slice(0,10)}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                                            <XAxis dataKey="event" stroke="#64748b" tick={{fill:'#94a3b8', fontSize: 10}} interval={0} height={60} angle={-15} textAnchor="end"/>
-                                            <YAxis stroke="#64748b" tick={{fill:'#94a3b8', fontSize: 10}}/>
-                                            <Tooltip content={<CustomTooltip />} />
-                                            <Bar dataKey="duration" fill="url(#gradBar)" radius={[4,4,0,0]} barSize={50} />
-                                            <defs>
-                                                <linearGradient id="gradBar" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="0%" stopColor="var(--accent)" />
-                                                    <stop offset="100%" stopColor="var(--accent)" stopOpacity={0.2} />
-                                                </linearGradient>
-                                            </defs>
-                                        </ComposedChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-
-                            {/* Right: Event Log & Category (1/3 width) */}
-                            <div className="flex flex-col gap-6">
-                                {/* Category Donut */}
-                                <div className="glass-panel p-6 rounded-2xl h-[250px] relative">
-                                    <h3 className="text-lg font-bold text-slate-200 absolute top-6 left-6">Categories</h3>
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie 
-                                                data={Object.values(filteredData.reduce((a,c)=>{
-                                                    if(!a[c.category]) a[c.category]={name:c.category, value:0};
-                                                    a[c.category].value+=c.duration; return a;
-                                                }, {}))} 
-                                                innerRadius={60} 
-                                                outerRadius={80} 
-                                                paddingAngle={5} 
-                                                dataKey="value"
-                                            >
-                                                <Cell fill="#6366f1" />
-                                                <Cell fill="#10b981" />
-                                                <Cell fill="#f59e0b" />
-                                                <Cell fill="#ef4444" />
-                                            </Pie>
-                                            <Tooltip contentStyle={{background: '#0f172a', border:'none', borderRadius: '8px'}} />
-                                            <Legend verticalAlign="middle" align="right" />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </div>
-
-                                {/* Log Table */}
-                                <div className="glass-panel rounded-2xl flex-1 overflow-hidden flex flex-col">
-                                    <div className="p-4 border-b border-white/10 bg-black/20">
-                                        <h3 className="font-bold text-slate-300">Live Log</h3>
-                                    </div>
-                                    <div className="flex-1 overflow-auto p-2">
-                                        <table className="w-full text-left text-sm">
-                                            <tbody className="divide-y divide-white/5">
-                                                {filteredData.slice(0, 50).map((r) => (
-                                                    <tr key={r.id} className="hover:bg-white/5 transition-colors">
-                                                        <td className="p-3 text-slate-400 text-xs font-mono">{r.date}</td>
-                                                        <td className="p-3 text-slate-200 font-medium">
-                                                            {r.event}
-                                                            <div className="text-[10px] text-slate-500 uppercase">{r.category}</div>
-                                                        </td>
-                                                        <td className="p-3 text-right">
-                                                            <span className={`px-2 py-1 rounded text-xs font-bold ${r.duration > 60 ? 'bg-red-500/20 text-red-400' : 'bg-slate-800 text-slate-400'}`}>
-                                                                {r.duration}m
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
+                    <div class="card-body">
+                        <div id="paretoChart" class="pareto-bars"></div>
                     </div>
                 </div>
+
+                <!-- Equipment Breakdown -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">By Equipment</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="equipmentBreakdown" class="equip-grid"></div>
+                    </div>
+                </div>
+
+                <!-- Trend Chart -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Daily Trend</span>
+                        <span class="filter-label" id="trendPeriod"></span>
+                    </div>
+                    <div class="card-body">
+                        <div id="trendChart" class="trend-chart"></div>
+                    </div>
+                </div>
+
+                <!-- Recurring Issues -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Recurring Issues</span>
+                        <span class="recurring-badge">🔄 3+ occurrences</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="recurringIssues"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pareto View (Full) -->
+        <div id="paretoView" class="hidden">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Full Pareto Analysis</span>
+                    <span id="paretoCount" class="filter-label"></span>
+                </div>
+                <div class="card-body" style="position:relative;">
+                    <div class="pareto-80-label">80%</div>
+                    <div id="fullParetoChart" class="pareto-bars"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trend View -->
+        <div id="trendView" class="hidden">
+            <div class="main-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Downtime by Day</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="fullTrendChart" class="trend-chart" style="height:280px;"></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Timeline View</span>
+                        <select id="timelineDate" class="input" onchange="renderTimeline()"></select>
+                    </div>
+                    <div class="card-body">
+                        <div id="timelineView"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table View -->
+        <div id="tableView" class="hidden">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Event Log</span>
+                    <input type="text" id="tableSearch" class="input" placeholder="Search..." style="width:180px;" oninput="renderTable()">
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable('date')">Date</th>
+                                <th onclick="sortTable('time')">Time</th>
+                                <th onclick="sortTable('line')">Line</th>
+                                <th onclick="sortTable('equipment')">Equipment</th>
+                                <th onclick="sortTable('event')">Event Description ↓</th>
+                                <th onclick="sortTable('duration')">Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TV Mode Exit -->
+<div class="tv-exit hidden" id="tvExit">
+    <button class="btn btn-danger" onclick="exitTVMode()">✕ Exit TV Mode</button>
+</div>
+
+<!-- Import Modal -->
+<div id="importModal" class="modal-overlay hidden" onclick="closeImportModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <span class="modal-title">📁 Import Data</span>
+            <button class="modal-close" onclick="closeImportModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                <div class="drop-zone-icon">📄</div>
+                <h3>Drop Excel file here or click to browse</h3>
+                <p>Supports .xlsx, .xls, .csv, .tsv</p>
+            </div>
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.tsv,.txt" style="display:none" onchange="handleFileSelect(event)">
+
+            <div class="modal-divider">or paste data</div>
+
+            <textarea id="pasteArea" class="paste-area" placeholder="Paste your data here (tab or comma separated)..."></textarea>
+
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="loadDemoData(); closeImportModal();">⚡ Load Demo</button>
+                <button class="btn btn-success" onclick="importPastedData()">Import</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tooltip -->
+<div id="tooltip" class="tooltip hidden"></div>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+<script>
+    // ═══════════════════════════════════════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    let rawData = [];
+    let filteredData = [];
+    let activeLine = 'all';
+    let activeEquipment = 'all';
+    let currentView = 'dashboard';
+    let sortField = 'event';  // Changed: Default sort by event description
+    let sortDir = 'asc';      // Changed: Ascending for alphabetical
+    let datePreset = 'all';
+
+    const costRates = {
+        'LINE A': 1003.50, 'LINE B': 1003.50,
+        'LINE C': 1299.33, 'LINE D': 1299.33
+    };
+
+    const equipmentConfig = {
+        'Case Packer': { color: '#f59e0b', keywords: ['cbp htw', 'cbp', 'case packer'] },
+        'Capper': { color: '#3b82f6', keywords: ['cap30', 'cap 30', 'capper'] },
+        'E80': { color: '#8b5cf6', keywords: ['e80', 'turbo eagle', 'eagle'] },
+        'Light Curtain': { color: '#06b6d4', keywords: ['lc30', 'lc 30', 'light curtain', 'lcc'] },
+        'Wrapper': { color: '#ec4899', keywords: ['silkworm', 'wrapper', 'silk worm'] },
+        'Accumulator': { color: '#10b981', keywords: ['achx', 'accumulator', 'accum'] },
+        'Processor': { color: '#ef4444', keywords: ['dairy not ready', 'processor', 'waiting on batch', 'batch'] },
+        'Filler': { color: '#6366f1', keywords: ['filler', 'fill', 'preparation device', 'splicing', 'strip magazine', 'motor start', 'design correction'] },
+        'Other': { color: '#64748b', keywords: [] }
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // UTILITIES
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const formatMoney = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
+    
+    const formatMinutes = (min) => {
+        if (min < 1) return '<1m';
+        if (min < 60) return Math.round(min) + 'm';
+        const hrs = Math.floor(min / 60);
+        const mins = Math.round(min % 60);
+        return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+    };
+
+    const formatHours = (min) => (min / 60).toFixed(1) + 'h';
+
+    const parseDuration = (durStr) => {
+        if (!durStr) return 0;
+        if (typeof durStr === 'number') return durStr;
+        
+        const str = String(durStr).trim();
+        
+        // Handle H:MM:SS format
+        const parts = str.split(':');
+        if (parts.length === 3) {
+            const hours = parseInt(parts[0]) || 0;
+            const minutes = parseInt(parts[1]) || 0;
+            const seconds = parseInt(parts[2]) || 0;
+            return hours * 60 + minutes + seconds / 60;
+        }
+        if (parts.length === 2) {
+            const minutes = parseInt(parts[0]) || 0;
+            const seconds = parseInt(parts[1]) || 0;
+            return minutes + seconds / 60;
+        }
+        
+        return parseFloat(str) || 0;
+    };
+
+    const detectEquipment = (eventDesc) => {
+        if (!eventDesc) return 'Other';
+        const lower = eventDesc.toLowerCase();
+        
+        for (const [equip, config] of Object.entries(equipmentConfig)) {
+            if (equip === 'Other') continue;
+            for (const keyword of config.keywords) {
+                if (lower.includes(keyword)) return equip;
+            }
+        }
+        return 'Other';
+    };
+
+    const getEquipmentClass = (equip) => {
+        const classMap = {
+            'Case Packer': 'casepacker',
+            'Capper': 'capper',
+            'E80': 'e80',
+            'Light Curtain': 'lightcurtain',
+            'Wrapper': 'wrapper',
+            'Accumulator': 'accumulator',
+            'Processor': 'processor',
+            'Filler': 'filler',
+            'Other': 'other'
+        };
+        return classMap[equip] || 'other';
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // THEME & TV MODE
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function toggleTheme() {
+        document.body.classList.toggle('light-theme');
+        localStorage.setItem('plms-theme', document.body.classList.contains('light-theme') ? 'light' : 'dark');
+    }
+
+    function enterTVMode() {
+        document.body.classList.add('tv-mode');
+        document.getElementById('tvExit').classList.remove('hidden');
+    }
+
+    function exitTVMode() {
+        document.body.classList.remove('tv-mode');
+        document.getElementById('tvExit').classList.add('hidden');
+    }
+
+    // Load saved theme
+    if (localStorage.getItem('plms-theme') === 'light') {
+        document.body.classList.add('light-theme');
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODAL
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function openImportModal() {
+        document.getElementById('importModal').classList.remove('hidden');
+        document.getElementById('pasteArea').value = '';
+    }
+
+    function closeImportModal(event) {
+        if (event && event.target !== event.currentTarget) return;
+        document.getElementById('importModal').classList.add('hidden');
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DATA PARSING
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function parseData(text) {
+        const lines = text.trim().split('\n').filter(l => l.trim());
+        if (lines.length < 2) return [];
+
+        const firstLine = lines[0];
+        let delimiter = '\t';
+        if (!firstLine.includes('\t')) {
+            delimiter = firstLine.includes(',') ? ',' : ';';
+        }
+
+        const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+        
+        // Find columns
+        const colIdx = {
+            date: headers.findIndex(h => h === 'date' || h.includes('date')),
+            time: headers.findIndex(h => h.includes('start time') || h === 'time' || h.includes('start')),
+            line: headers.findIndex(h => h.includes('line') || h.includes('machine')),
+            eventCode: headers.findIndex(h => h.includes('event code number') || h.includes('code number')),
+            event: headers.findIndex(h => h.includes('event code description') || h.includes('description') || h.includes('event')),
+            duration: headers.findIndex(h => h.includes('duration'))
+        };
+
+        // If event column not found, try alternatives
+        if (colIdx.event === -1) {
+            colIdx.event = headers.findIndex(h => h.includes('reason') || h.includes('cause'));
+        }
+
+        const data = [];
+        let currentDate = '';
+
+        for (let i = 1; i < lines.length; i++) {
+            const cols = lines[i].split(delimiter).map(c => c.trim().replace(/['"]/g, ''));
+            
+            // Forward-fill date
+            const dateVal = colIdx.date >= 0 ? cols[colIdx.date] : '';
+            if (dateVal && dateVal.trim()) {
+                currentDate = dateVal;
+            }
+
+            const timeVal = colIdx.time >= 0 ? cols[colIdx.time] : '';
+            let lineVal = colIdx.line >= 0 ? cols[colIdx.line] : '';
+            const eventCode = colIdx.eventCode >= 0 ? cols[colIdx.eventCode] : '';
+            const eventVal = colIdx.event >= 0 ? cols[colIdx.event] : '';
+            const durationVal = colIdx.duration >= 0 ? cols[colIdx.duration] : '';
+
+            // Normalize line
+            lineVal = normalizeLineName(lineVal);
+
+            // Parse duration
+            const duration = parseDuration(durationVal);
+
+            // Skip if no event or duration
+            if (!eventVal && !duration) continue;
+
+            // Detect equipment
+            const equipment = detectEquipment(eventVal);
+
+            // Parse date
+            let parsedDate = null;
+            if (currentDate) {
+                parsedDate = new Date(currentDate);
+                if (isNaN(parsedDate.getTime())) {
+                    const parts = currentDate.split(/[-\/]/);
+                    if (parts.length === 3) {
+                        parsedDate = new Date(parts[2], parts[0] - 1, parts[1]);
+                    }
+                }
+            }
+
+            data.push({
+                id: i,
+                date: currentDate,
+                parsedDate,
+                time: timeVal,
+                line: lineVal || 'UNKNOWN',
+                eventCode,
+                event: eventVal || 'Unknown Event',
+                duration,
+                equipment
+            });
+        }
+
+        // Sort by event description (alphabetically) by default
+        data.sort((a, b) => a.event.localeCompare(b.event));
+
+        return data;
+    }
+
+    function normalizeLineName(name) {
+        if (!name) return 'UNKNOWN';
+        const upper = name.toUpperCase().trim().replace(/\s+/g, ' ');
+        if (upper.includes('LINE A') || upper === 'A') return 'LINE A';
+        if (upper.includes('LINE B') || upper === 'B') return 'LINE B';
+        if (upper.includes('LINE C') || upper === 'C') return 'LINE C';
+        if (upper.includes('LINE D') || upper === 'D') return 'LINE D';
+        if (upper.includes('LINE')) return upper;
+        return upper;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // FILE HANDLING
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const dropZone = document.getElementById('dropZone');
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) handleFile(file);
+    });
+
+    async function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (file) handleFile(file);
+    }
+
+    async function handleFile(file) {
+        try {
+            let text;
+            if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                const data = await file.arrayBuffer();
+                const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                text = XLSX.utils.sheet_to_csv(firstSheet);
+            } else {
+                text = await file.text();
+            }
+            
+            rawData = parseData(text);
+            if (rawData.length > 0) {
+                closeImportModal();
+                initializeDashboard();
+                saveToLocalStorage();
+            } else {
+                alert('No data found. Please check the file format.');
+            }
+        } catch (err) {
+            alert('Error parsing file: ' + err.message);
+        }
+    }
+
+    function importPastedData() {
+        const text = document.getElementById('pasteArea').value.trim();
+        if (!text) {
+            alert('Please paste some data first.');
+            return;
+        }
+        
+        rawData = parseData(text);
+        if (rawData.length > 0) {
+            closeImportModal();
+            initializeDashboard();
+            saveToLocalStorage();
+        } else {
+            alert('Could not parse the data. Please check the format.');
+        }
+    }
+
+    function loadDemoData() {
+        const demoData = `Date	Start Time	Line 	Event Code Number	Event Code Description	Duration
+```
+
+11/7/2025	04:33:11	Line A	573304300	CBP HTW: Tray transport tray control - no tray “B1321”	0:07:12
+04:47:54	Line A	103781090	Dairy not ready	0:02:19
+15:36:12	Line A	103399300	Motor start	0:00:21
+15:47:46	Line A	573304310	CBP HTW: Tray transport tray control - tray get stuck “B1322”	0:12:23
+18:27:40	Line A	573704010	CBP HTW: Tray extractor - tray magazine empty “B1332”	0:03:06
+19:46:43	Line A	103781090	Dairy not ready	0:54:12
+21:09:54	Line A	677302730	E80 TURBO EAGLE: Dispenser Tout Overtravel_(A116)	0:04:13
+21:17:23	Line A	573308020	CBP HTW: Transport chain below - drive overload “Q1101”	0:17:45
+21:39:07	Line A	573303230	CBP HTW: Infeed pusher - drive overload “Q3001”	0:12:09
+21:53:54	Line A	573308020	CBP HTW: Transport chain below - drive overload “Q1101”	0:19:23
+22:16:42	Line A	573308220	CBP HTW: Edge flap folder left - drive not ready “Q1140”	0:28:26
+11/8/2025	00:16:01	Line A	573304300	CBP HTW: Tray transport tray control - no tray “B1321”	0:17:54
+00:36:11	Line A	573304300	CBP HTW: Tray transport tray control - no tray “B1321”	0:05:32
+01:03:12	Line A	573704010	CBP HTW: Tray extractor - tray magazine empty “B1332”	0:03:37
+01:14:00	Line A	103781090	Dairy not ready	0:08:49
+14:25:40	Line A	103316230	Design correction, folding flap servo fault	0:02:37
+14:28:17	Line A	103399300	Motor start	0:00:18
+14:30:40	Line A	103710260	Preparation device, packaging material not ready	0:48:17
+17:28:02	Line A	598701010	SILKWORM: A004.0-GEN-Inlet safety barrier tripped	0:05:51
+18:03:11	Line A	103311100	Strip magazine, full	0:12:48
+18:36:20	Line A	320750040	CAP30: Caps Magazine Empty	0:03:29
+19:34:13	Line A	103781090	Dairy not ready	1:06:33
+20:45:08	Line A	573300000	CBP HTW: CBP HTW EQUIPMENT STOP	0:13:45
+21:00:34	Line A	573300000	CBP HTW: CBP HTW EQUIPMENT STOP	0:03:11
+21:31:45	Line A	320340080	CAP30: Caps Overlapped / Blocked on Belt	0:05:40
+22:13:10	Line A	677302290	E80 TURBO EAGLE: Tout Transfer Ep1M2>>PI1M1_(A082)	0:11:38
+22:50:35	Line A	573308020	CBP HTW: Transport chain below - drive overload “Q1101”	0:12:04
+23:09:46	Line A	320300000	CAP30: Equipment stop	0:18:42
+23:33:02	Line A	573700000	CBP HTW: CBP HTW IDLE STOP	0:04:39
+11/9/2025	00:16:46	Line A	677300000	E80 TURBO EAGLE: EQUIPMENT_STOP	0:07:21
+01:27:38	Line A	201302000	EXTERNAL DATING UNIT	0:03:34
+01:38:53	Line A	573702010	CBP HTW: Manual step down	0:04:59
+01:53:52	Line A	320750040	CAP30: Caps Magazine Empty	0:04:44
+02:59:21	Line A	103310010	Splicing device	0:12:27
+06:59:06	Line A	573304210	CBP HTW: Cross feeding - conveyor belt - jam “B1332”	0:06:46
+07:13:07	Line A	301762020	LC30Plus: Count Photocell Jam On Lcc2	0:05:39
+07:20:09	Line A	103781090	Dairy not ready	0:30:39
+07:50:51	Line A	103781090	Dairy not ready	0:01:29
+07:52:20	Line A	103781090	Dairy not ready	0:00:11
+07:52:31	Line A	103781090	Dairy not ready	1:24:45
+09:22:22	Line A	573308110	CBP HTW: Transport chain - clearence control “B5020”	0:15:11
+10:22:09	Line A	573308230	CBP HTW: Edge flap folder left - drive overload “Q1140”	0:05:41
+10:40:37	Line A	573308110	CBP HTW: Transport chain - clearence control “B5020”	0:02:59
+11:55:34	Line A	573704010	CBP HTW: Tray extractor - tray magazine empty “B1332”	0:04:58
+12:23:02	Line A	210330730	ACHX: Fallen pack	0:06:26
+13:09:10	Line A	301761020	LC30Plus: Count Photocell Jam On Lcc1	0:04:28`;
+
+```
+        rawData = parseData(demoData);
+        initializeDashboard();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LOCAL STORAGE
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function saveToLocalStorage() {
+        try {
+            localStorage.setItem('plms-data', JSON.stringify(rawData));
+        } catch (e) {
+            console.warn('Could not save to localStorage');
+        }
+    }
+
+    function loadFromLocalStorage() {
+        try {
+            const saved = localStorage.getItem('plms-data');
+            if (saved) {
+                rawData = JSON.parse(saved);
+                // Restore parsed dates
+                rawData.forEach(d => {
+                    if (d.date) d.parsedDate = new Date(d.date);
+                });
+                if (rawData.length > 0) {
+                    return true;
+                }
+            }
+        } catch (e) {
+            console.warn('Could not load from localStorage');
+        }
+        return false;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DASHBOARD INITIALIZATION
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function initializeDashboard() {
+        document.getElementById('statusBar').innerHTML = `
+            <span class="status-dot ready"></span>
+            <span>${rawData.length} events</span>
+        `;
+
+        renderLineTabs();
+        populateEquipmentFilter();
+        setupDatePresets();
+        applyFilters();
+    }
+
+    function renderLineTabs() {
+        const lines = [...new Set(rawData.map(d => d.line))].filter(l => l !== 'UNKNOWN').sort();
+        document.getElementById('lineTabs').innerHTML = `
+            <button class="tab ${activeLine === 'all' ? 'active' : ''}" onclick="setLine('all')">All</button>
+            ${lines.map(l => `<button class="tab ${activeLine === l ? 'active' : ''}" onclick="setLine('${l}')">${l}</button>`).join('')}
+        `;
+    }
+
+    function populateEquipmentFilter() {
+        const equipments = [...new Set(rawData.map(d => d.equipment))].sort();
+        const select = document.getElementById('equipmentSelect');
+        select.innerHTML = `<option value="all">All Equipment</option>` + 
+            equipments.map(e => `<option value="${e}">${e}</option>`).join('');
+    }
+
+    function setupDatePresets() {
+        document.querySelectorAll('.date-preset').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                datePreset = btn.dataset.preset;
+                applyDatePreset(datePreset);
+            };
+        });
+    }
+
+    function applyDatePreset(preset) {
+        const dates = rawData.filter(d => d.parsedDate).map(d => d.parsedDate);
+        if (dates.length === 0) return;
+
+        const maxDate = new Date(Math.max(...dates));
+        let minDate;
+
+        switch (preset) {
+            case '7d':
+                minDate = new Date(maxDate);
+                minDate.setDate(minDate.getDate() - 7);
+                break;
+            case '14d':
+                minDate = new Date(maxDate);
+                minDate.setDate(minDate.getDate() - 14);
+                break;
+            case '30d':
+                minDate = new Date(maxDate);
+                minDate.setDate(minDate.getDate() - 30);
+                break;
+            default:
+                document.getElementById('startDate').value = '';
+                document.getElementById('endDate').value = '';
+                applyFilters();
+                return;
+        }
+
+        document.getElementById('startDate').value = minDate.toISOString().split('T')[0];
+        document.getElementById('endDate').value = maxDate.toISOString().split('T')[0];
+        applyFilters();
+    }
+
+    function setLine(line) {
+        activeLine = line;
+        renderLineTabs();
+        applyFilters();
+    }
+
+    function setView(view) {
+        currentView = view;
+        document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
+        document.getElementById('dashboardView').classList.toggle('hidden', view !== 'dashboard');
+        document.getElementById('paretoView').classList.toggle('hidden', view !== 'pareto');
+        document.getElementById('trendView').classList.toggle('hidden', view !== 'trend');
+        document.getElementById('tableView').classList.toggle('hidden', view !== 'table');
+        
+        if (view === 'trend') renderTimeline();
+    }
+
+    function clearFilters() {
+        activeLine = 'all';
+        activeEquipment = 'all';
+        document.getElementById('startDate').value = '';
+        document.getElementById('endDate').value = '';
+        document.getElementById('equipmentSelect').value = 'all';
+        document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active'));
+        document.querySelector('.date-preset[data-preset="all"]').classList.add('active');
+        renderLineTabs();
+        applyFilters();
+    }
+
+    function clearEquipmentFilter() {
+        activeEquipment = 'all';
+        document.getElementById('equipmentSelect').value = 'all';
+        document.getElementById('paretoFilterLabel').style.display = 'none';
+        applyFilters();
+    }
+
+    function filterByEquipment(equip) {
+        activeEquipment = equip;
+        document.getElementById('equipmentSelect').value = equip;
+        document.getElementById('paretoFilterLabel').textContent = equip;
+        document.getElementById('paretoFilterLabel').className = `equip-badge ${getEquipmentClass(equip)}`;
+        document.getElementById('paretoFilterLabel').style.display = 'inline-flex';
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        activeEquipment = document.getElementById('equipmentSelect').value;
+
+        filteredData = rawData.filter(d => {
+            if (activeLine !== 'all' && d.line !== activeLine) return false;
+            if (activeEquipment !== 'all' && d.equipment !== activeEquipment) return false;
+            if (startDate && d.parsedDate && d.parsedDate < new Date(startDate)) return false;
+            if (endDate && d.parsedDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59);
+                if (d.parsedDate > end) return false;
+            }
+            return true;
+        });
+
+        renderKPIs();
+        renderParetoChart();
+        renderEquipmentBreakdown();
+        renderTrendChart();
+        renderRecurringIssues();
+        renderFullPareto();
+        renderTable();
+        if (currentView === 'trend') renderTimeline();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // RENDERERS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function renderKPIs() {
+        const totalDuration = filteredData.reduce((acc, d) => acc + d.duration, 0);
+        const eventCount = filteredData.length;
+        const mttr = eventCount > 0 ? totalDuration / eventCount : 0;
+        
+        const cost = filteredData.reduce((acc, d) => {
+            const rate = costRates[d.line] || 1000;
+            return acc + (d.duration / 60) * rate;
+        }, 0);
+
+        // Get unique days
+        const uniqueDays = new Set(filteredData.map(d => d.date)).size;
+        const avgPerDay = uniqueDays > 0 ? totalDuration / uniqueDays : 0;
+
+        // Target MTTR
+        const targetMTTR = 15;
+        let score = mttr > 0 ? Math.max(0, Math.min(100, 100 - ((mttr - targetMTTR) / targetMTTR) * 50)) : 100;
+        const scoreClass = score >= 80 ? 'green' : score >= 60 ? 'amber' : 'red';
+
+        document.getElementById('kpiGrid').innerHTML = `
+            <div class="kpi-card">
+                <div class="kpi-label">Performance</div>
+                <div class="kpi-value ${scoreClass}">${Math.round(score)}</div>
+                <div class="progress-bar"><div class="progress-fill ${scoreClass}" style="width:${score}%"></div></div>
+                <div class="kpi-sub">vs ${targetMTTR}m target MTTR</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Total Loss</div>
+                <div class="kpi-value red">${formatMoney(cost)}</div>
+                <div class="kpi-sub">${formatHours(totalDuration)} downtime</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Total Downtime</div>
+                <div class="kpi-value blue">${formatMinutes(totalDuration)}</div>
+                <div class="kpi-sub">${eventCount} events</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">MTTR</div>
+                <div class="kpi-value ${mttr <= targetMTTR ? 'green' : 'amber'}">${formatMinutes(mttr)}</div>
+                <div class="kpi-sub">Avg time to recover</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Daily Avg</div>
+                <div class="kpi-value purple">${formatMinutes(avgPerDay)}</div>
+                <div class="kpi-sub">${uniqueDays} days analyzed</div>
+            </div>
+        `;
+    }
+
+    function getParetoData() {
+        const eventSums = {};
+        filteredData.forEach(d => {
+            const key = d.event;
+            if (!eventSums[key]) {
+                eventSums[key] = { event: d.event, duration: 0, count: 0, equipment: d.equipment, eventCode: d.eventCode };
+            }
+            eventSums[key].duration += d.duration;
+            eventSums[key].count += 1;
+        });
+
+        const sorted = Object.values(eventSums).sort((a, b) => b.duration - a.duration);
+        const total = sorted.reduce((acc, d) => acc + d.duration, 0);
+        
+        let cumulative = 0;
+        return sorted.map(d => {
+            cumulative += d.duration;
+            return { ...d, cumPercent: total > 0 ? (cumulative / total) * 100 : 0 };
+        });
+    }
+
+    function renderParetoChart() {
+        const paretoData = getParetoData().slice(0, 10);
+        const maxDuration = Math.max(...paretoData.map(d => d.duration), 1);
+        
+        document.getElementById('paretoChart').innerHTML = paretoData.length ? paretoData.map((d, i) => `
+            <div class="pareto-item" onclick="filterByEquipment('${d.equipment}')">
+                <div class="pareto-rank ${i < 3 ? 'rank-' + (i+1) : 'default'}">${i + 1}</div>
+                <div class="pareto-info">
+                    <div class="pareto-event">${d.event}</div>
+                    <div class="pareto-meta">
+                        <span>${d.count}x</span>
+                        <span class="equip-badge ${getEquipmentClass(d.equipment)}">${d.equipment}</span>
+                    </div>
+                </div>
+                <div class="pareto-bar-wrapper">
+                    <div class="pareto-bar-container">
+                        <div class="pareto-bar ${getEquipmentClass(d.equipment)}" style="width:${(d.duration / maxDuration) * 100}%"></div>
+                    </div>
+                </div>
+                <div class="pareto-value">${formatMinutes(d.duration)}</div>
+                <div class="pareto-cumulative ${d.cumPercent >= 80 ? 'past-80' : ''}">${d.cumPercent.toFixed(0)}%</div>
+            </div>
+        `).join('') : '<div style="text-align:center;color:var(--text-muted);padding:20px;">No data</div>';
+    }
+
+    function renderEquipmentBreakdown() {
+        const equipSums = {};
+        filteredData.forEach(d => {
+            if (!equipSums[d.equipment]) equipSums[d.equipment] = { duration: 0, count: 0 };
+            equipSums[d.equipment].duration += d.duration;
+            equipSums[d.equipment].count += 1;
+        });
+
+        const sorted = Object.entries(equipSums).sort((a, b) => b[1].duration - a[1].duration);
+        
+        document.getElementById('equipmentBreakdown').innerHTML = sorted.map(([equip, data]) => `
+            <div class="equip-item ${activeEquipment === equip ? 'selected' : ''}" onclick="filterByEquipment('${equip}')">
+                <div class="equip-dot" style="background:${equipmentConfig[equip]?.color || '#64748b'}"></div>
+                <div class="equip-info">
+                    <div class="equip-name">${equip}</div>
+                    <div class="equip-count">${data.count} events</div>
+                </div>
+                <div class="equip-value">${formatMinutes(data.duration)}</div>
+            </div>
+        `).join('') || '<div style="text-align:center;color:var(--text-muted);padding:20px;grid-column:span 2;">No data</div>';
+    }
+
+    function renderTrendChart() {
+        const dateSums = {};
+        filteredData.forEach(d => {
+            if (!d.date) return;
+            if (!dateSums[d.date]) dateSums[d.date] = 0;
+            dateSums[d.date] += d.duration;
+        });
+
+        const sorted = Object.entries(dateSums).sort((a, b) => new Date(a[0]) - new Date(b[0]));
+        const maxDuration = Math.max(...sorted.map(d => d[1]), 1);
+
+        const formatDateLabel = (dateStr) => {
+            const d = new Date(dateStr);
+            return `${d.getMonth() + 1}/${d.getDate()}`;
+        };
+
+        document.getElementById('trendPeriod').textContent = sorted.length ? `${sorted.length} days` : '';
+
+        const chartContainer = document.getElementById('trendChart');
+        chartContainer.innerHTML = sorted.length ? sorted.map(([date, dur]) => `
+            <div class="trend-bar-group">
+                <div class="trend-bar" style="height:${(dur / maxDuration) * 150}px;background:var(--blue);" title="${date}: ${formatMinutes(dur)}"></div>
+                <div class="trend-label">${formatDateLabel(date)}</div>
+            </div>
+        `).join('') : '<div style="text-align:center;color:var(--text-muted);width:100%;">No trend data</div>';
+
+        // Also render full trend chart
+        document.getElementById('fullTrendChart').innerHTML = chartContainer.innerHTML;
+    }
+
+    function renderRecurringIssues() {
+        const eventCounts = {};
+        filteredData.forEach(d => {
+            if (!eventCounts[d.event]) eventCounts[d.event] = { count: 0, duration: 0, equipment: d.equipment };
+            eventCounts[d.event].count += 1;
+            eventCounts[d.event].duration += d.duration;
+        });
+
+        const recurring = Object.entries(eventCounts)
+            .filter(([_, data]) => data.count >= 3)
+            .sort((a, b) => b[1].count - a[1].count)
+            .slice(0, 5);
+
+        document.getElementById('recurringIssues').innerHTML = recurring.length ? recurring.map(([event, data]) => `
+            <div class="pareto-item" style="margin-bottom:6px;">
+                <div class="pareto-rank default" style="background:rgba(239,68,68,0.2);color:var(--red);">${data.count}x</div>
+                <div class="pareto-info">
+                    <div class="pareto-event">${event}</div>
+                    <div class="pareto-meta">
+                        <span class="equip-badge ${getEquipmentClass(data.equipment)}">${data.equipment}</span>
+                    </div>
+                </div>
+                <div class="pareto-value">${formatMinutes(data.duration)}</div>
+            </div>
+        `).join('') : '<div style="text-align:center;color:var(--text-muted);padding:20px;">No recurring issues (3+) found</div>';
+    }
+
+    function renderFullPareto() {
+        const paretoData = getParetoData().slice(0, 25);
+        const maxDuration = Math.max(...paretoData.map(d => d.duration), 1);
+        
+        document.getElementById('paretoCount').textContent = `${paretoData.length} unique events`;
+        
+        document.getElementById('fullParetoChart').innerHTML = paretoData.map((d, i) => `
+            <div class="pareto-item">
+                <div class="pareto-rank ${i < 3 ? 'rank-' + (i+1) : 'default'}">${i + 1}</div>
+                <div class="pareto-info">
+                    <div class="pareto-event">${d.event}</div>
+                    <div class="pareto-meta">
+                        <span>${d.count}x</span>
+                        <span class="equip-badge ${getEquipmentClass(d.equipment)}">${d.equipment}</span>
+                    </div>
+                </div>
+                <div class="pareto-bar-wrapper">
+                    <div class="pareto-bar-container">
+                        <div class="pareto-bar ${getEquipmentClass(d.equipment)}" style="width:${(d.duration / maxDuration) * 100}%"></div>
+                        ${d.cumPercent >= 80 && i > 0 ? '<div class="pareto-80-marker" style="left:' + (80 * (maxDuration / d.duration)) + '%;"></div>' : ''}
+                    </div>
+                </div>
+                <div class="pareto-value">${formatMinutes(d.duration)}</div>
+                <div class="pareto-cumulative ${d.cumPercent >= 80 ? 'past-80' : ''}">${d.cumPercent.toFixed(0)}%</div>
+            </div>
+        `).join('');
+    }
+
+    function renderTimeline() {
+        const dates = [...new Set(filteredData.map(d => d.date))].filter(d => d).sort();
+        const select = document.getElementById('timelineDate');
+        
+        if (!select.options.length || select.options[0].value !== dates[0]) {
+            select.innerHTML = dates.map(d => `<option value="${d}">${d}</option>`).join('');
+        }
+
+        const selectedDate = select.value || dates[0];
+        const dayEvents = filteredData.filter(d => d.date === selectedDate);
+
+        const parseTime = (timeStr) => {
+            if (!timeStr) return 0;
+            const parts = timeStr.split(':');
+            return (parseInt(parts[0]) || 0) + (parseInt(parts[1]) || 0) / 60;
+        };
+
+        const container = document.getElementById('timelineView');
+        
+        if (!dayEvents.length) {
+            container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px;">No events for this day</div>';
+            return;
+        }
+
+        const hours = Array.from({length: 25}, (_, i) => i);
+        
+        container.innerHTML = `
+            <div class="timeline-container">
+                <div class="timeline-hours">
+                    ${[0, 6, 12, 18, 24].map(h => `<span class="timeline-hour">${h}:00</span>`).join('')}
+                </div>
+                <div class="timeline-track">
+                    ${dayEvents.map(e => {
+                        const startHour = parseTime(e.time);
+                        const durationHours = e.duration / 60;
+                        const left = (startHour / 24) * 100;
+                        const width = Math.max((durationHours / 24) * 100, 0.5);
+                        return `<div class="timeline-event" style="left:${left}%;width:${width}%;background:${equipmentConfig[e.equipment]?.color || '#64748b'};" title="${e.time} - ${e.event} (${formatMinutes(e.duration)})"></div>`;
+                    }).join('')}
+                </div>
+            </div>
+            <div style="margin-top:12px;font-size:11px;color:var(--text-muted);">
+                ${dayEvents.length} events · ${formatMinutes(dayEvents.reduce((a, d) => a + d.duration, 0))} total downtime
+            </div>
+        `;
+    }
+
+    function renderTable() {
+        const searchTerm = (document.getElementById('tableSearch')?.value || '').toLowerCase();
+        
+        let data = [...filteredData];
+        if (searchTerm) {
+            data = data.filter(d => 
+                d.event.toLowerCase().includes(searchTerm) ||
+                d.line.toLowerCase().includes(searchTerm) ||
+                d.equipment.toLowerCase().includes(searchTerm)
             );
         }
 
-        // Sub-Components
-        const KPICard = ({ title, value, sub, color }) => (
-            <div className="glass-panel p-6 rounded-2xl relative overflow-hidden group hover:bg-white/5 transition-colors">
-                <p className="text-slate-400 text-sm font-bold uppercase tracking-wider">{title}</p>
-                <p className={`text-4xl font-black mt-2 tracking-tight ${color}`}>{value}</p>
-                <p className="text-slate-500 text-xs mt-1">{sub}</p>
-            </div>
-        );
+        // Sort by event description by default (alphabetically)
+        data.sort((a, b) => {
+            let aVal = a[sortField], bVal = b[sortField];
+            if (typeof aVal === 'string') return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
+        });
 
-        const CustomTooltip = ({ active, payload, label }) => {
-            if (active && payload && payload.length) {
-                return (
-                    <div className="glass-panel p-3 rounded-xl border border-white/20">
-                        <p className="font-bold text-white mb-1">{label}</p>
-                        <p className="text-indigo-300 text-sm">{payload[0].value} mins lost</p>
-                    </div>
-                );
-            }
-            return null;
-        };
+        document.getElementById('tableBody').innerHTML = data.slice(0, 200).map(d => {
+            const lineClass = d.line.toLowerCase().replace(/\s+/g, '-');
+            const durationClass = d.duration > 30 ? 'high' : d.duration > 15 ? 'medium' : '';
+            return `
+                <tr>
+                    <td style="font-family:'JetBrains Mono',monospace;color:var(--text-muted);font-size:10px;">${d.date}</td>
+                    <td style="font-family:'JetBrains Mono',monospace;color:var(--text-muted);font-size:10px;">${d.time}</td>
+                    <td><span class="line-badge ${lineClass}">${d.line}</span></td>
+                    <td><span class="equip-badge ${getEquipmentClass(d.equipment)}">${d.equipment}</span></td>
+                    <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.event}">${d.event}</td>
+                    <td><span class="duration-value ${durationClass}">${formatMinutes(d.duration)}</span></td>
+                </tr>
+            `;
+        }).join('');
+    }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+    function sortTable(field) {
+        if (sortField === field) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        else { sortField = field; sortDir = field === 'event' ? 'asc' : 'desc'; }
+        renderTable();
+    }
+
+    function exportData() {
+        const headers = ['Date', 'Time', 'Line', 'Equipment', 'Event Code', 'Event Description', 'Duration (min)'];
+        const rows = filteredData.map(d => [d.date, d.time, d.line, d.equipment, d.eventCode, d.event, d.duration.toFixed(1)]);
+        
+        const wsData = [headers, ...rows];
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Downtime Data');
+        XLSX.writeFile(wb, 'plms_export.xlsx');
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // AUTO-INITIALIZE ON LOAD
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Try to load from localStorage first, otherwise load demo data
+    if (!loadFromLocalStorage()) {
+        loadDemoData();
+    } else {
+        initializeDashboard();
+    }
+</script>
+```
+
 </body>
 </html>
-
