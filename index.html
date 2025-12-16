@@ -1,1834 +1,612 @@
-<!DOCTYPE html>
-
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PLMS Command Center</title>
-
-```
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
-<style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    :root {
-        --bg-primary: #0a0a0f;
-        --bg-secondary: #111118;
-        --bg-card: rgba(18, 18, 26, 0.9);
-        --border: rgba(255, 255, 255, 0.08);
-        --text-primary: #f4f4f5;
-        --text-secondary: #a1a1aa;
-        --text-muted: #52525b;
-        --blue: #3b82f6;
-        --purple: #8b5cf6;
-        --green: #10b981;
-        --amber: #f59e0b;
-        --red: #ef4444;
-        --cyan: #06b6d4;
-        --pink: #ec4899;
-    }
-
-    body {
-        font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-        background: var(--bg-primary);
-        color: var(--text-primary);
-        min-height: 100vh;
-        background-image: 
-            radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.12), transparent),
-            radial-gradient(ellipse 60% 40% at 100% 0%, rgba(139, 92, 246, 0.08), transparent);
-    }
-
-    body.light-theme {
-        --bg-primary: #f8fafc;
-        --bg-secondary: #f1f5f9;
-        --bg-card: rgba(255, 255, 255, 0.95);
-        --border: rgba(0, 0, 0, 0.08);
-        --text-primary: #0f172a;
-        --text-secondary: #475569;
-        --text-muted: #94a3b8;
-        background-image: none;
-        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    }
-
-    body.tv-mode {
-        overflow: hidden;
-    }
-
-    .container { max-width: 1600px; margin: 0 auto; padding: 16px; }
-    .tv-mode .container { max-width: 100%; padding: 20px; }
-
-    /* Header */
-    .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-        padding-bottom: 16px;
-        border-bottom: 1px solid var(--border);
-    }
-
-    .tv-mode .header { display: none; }
-
-    .header-left { display: flex; align-items: center; gap: 12px; }
-
-    .logo {
-        width: 40px; height: 40px;
-        background: linear-gradient(135deg, var(--blue), var(--purple));
-        border-radius: 10px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 16px;
-    }
-
-    .title { font-size: 20px; font-weight: 700; }
-    .subtitle { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
-
-    .header-actions { display: flex; gap: 8px; align-items: center; }
-
-    /* Buttons */
-    .btn {
-        padding: 7px 14px;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 12px;
-        cursor: pointer;
-        border: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        transition: all 0.2s;
-        font-family: inherit;
-    }
-
-    .btn-primary {
-        background: linear-gradient(135deg, var(--blue), var(--purple));
-        color: white;
-    }
-    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
-
-    .btn-ghost {
-        background: rgba(255, 255, 255, 0.05);
-        color: var(--text-secondary);
-        border: 1px solid var(--border);
-    }
-    .btn-ghost:hover { background: rgba(255, 255, 255, 0.1); color: var(--text-primary); }
-
-    .btn-success { background: var(--green); color: white; }
-    .btn-danger { background: var(--red); color: white; }
-
-    .btn-icon {
-        padding: 7px;
-        min-width: 32px;
-        justify-content: center;
-    }
-
-    /* Cards */
-    .card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        overflow: hidden;
-    }
-
-    .card-header {
-        padding: 12px 16px;
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .card-title { font-weight: 600; font-size: 13px; color: var(--text-secondary); }
-    .card-body { padding: 14px; }
-
-    /* Tabs */
-    .tabs {
-        display: flex;
-        gap: 3px;
-        background: rgba(255, 255, 255, 0.03);
-        padding: 3px;
-        border-radius: 8px;
-        border: 1px solid var(--border);
-        flex-wrap: wrap;
-    }
-
-    .tab {
-        padding: 6px 14px;
-        border-radius: 5px;
-        font-weight: 600;
-        font-size: 12px;
-        cursor: pointer;
-        color: var(--text-muted);
-        background: transparent;
-        border: none;
-        transition: all 0.2s;
-        font-family: inherit;
-    }
-
-    .tab:hover { color: var(--text-secondary); }
-    .tab.active { background: linear-gradient(135deg, var(--blue), var(--purple)); color: white; }
-
-    /* Filters */
-    .filters-bar {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        margin-bottom: 16px;
-        flex-wrap: wrap;
-    }
-
-    .tv-mode .filters-bar { margin-bottom: 20px; }
-
-    .filter-group { display: flex; align-items: center; gap: 5px; }
-    .filter-label { font-size: 11px; color: var(--text-muted); }
-
-    input[type="date"], select, .input {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        padding: 5px 8px;
-        color: var(--text-primary);
-        font-size: 11px;
-        font-family: inherit;
-    }
-
-    .light-theme input[type="date"], .light-theme select, .light-theme .input {
-        background: white;
-        border-color: #e2e8f0;
-    }
-
-    input:focus, select:focus, .input:focus { outline: none; border-color: var(--blue); }
-
-    .date-presets { display: flex; gap: 4px; }
-    .date-preset {
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 10px;
-        font-weight: 600;
-        cursor: pointer;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid var(--border);
-        color: var(--text-muted);
-        font-family: inherit;
-        transition: all 0.2s;
-    }
-    .date-preset:hover { background: rgba(255, 255, 255, 0.1); color: var(--text-secondary); }
-    .date-preset.active { background: var(--blue); color: white; border-color: var(--blue); }
-
-    /* KPI Grid */
-    .kpi-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 10px;
-        margin-bottom: 16px;
-    }
-
-    .tv-mode .kpi-grid { grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
-
-    .kpi-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 14px;
-        position: relative;
-        overflow: hidden;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
-    .kpi-card.clickable { cursor: pointer; }
-
-    .kpi-label {
-        font-size: 9px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: var(--text-muted);
-        margin-bottom: 4px;
-    }
-
-    .kpi-value { font-size: 22px; font-weight: 800; line-height: 1.1; }
-    .tv-mode .kpi-value { font-size: 28px; }
-    .kpi-sub { font-size: 9px; color: var(--text-muted); margin-top: 2px; }
-
-    .kpi-trend {
-        display: inline-flex;
-        align-items: center;
-        gap: 2px;
-        font-size: 10px;
-        font-weight: 600;
-        padding: 2px 6px;
-        border-radius: 4px;
-        margin-top: 4px;
-    }
-
-    .kpi-trend.up { background: rgba(239, 68, 68, 0.15); color: var(--red); }
-    .kpi-trend.down { background: rgba(16, 185, 129, 0.15); color: var(--green); }
-
-    .kpi-value.green { color: var(--green); }
-    .kpi-value.red { color: var(--red); }
-    .kpi-value.blue { color: var(--blue); }
-    .kpi-value.amber { color: var(--amber); }
-    .kpi-value.purple { color: var(--purple); }
-    .kpi-value.cyan { color: var(--cyan); }
-
-    .kpi-sparkline {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 30px;
-        opacity: 0.3;
-    }
-
-    .progress-bar {
-        height: 4px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 2px;
-        overflow: hidden;
-        margin-top: 6px;
-    }
-
-    .progress-fill { height: 100%; border-radius: 2px; transition: width 0.5s; }
-    .progress-fill.green { background: var(--green); }
-    .progress-fill.amber { background: var(--amber); }
-    .progress-fill.red { background: var(--red); }
-
-    /* Main Grid */
-    .main-grid {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 12px;
-    }
-
-    .tv-mode .main-grid { grid-template-columns: 2fr 1fr; gap: 20px; }
-
-    @media (max-width: 1200px) {
-        .main-grid { grid-template-columns: 1fr; }
-    }
-
-    .full-width { grid-column: 1 / -1; }
-
-    /* Pareto Chart */
-    .pareto-container { position: relative; }
-
-    .pareto-bars { display: flex; flex-direction: column; gap: 8px; }
-
-    .pareto-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-        padding: 4px;
-        border-radius: 6px;
-        transition: background 0.2s;
-    }
-
-    .pareto-item:hover { background: rgba(255, 255, 255, 0.03); }
-    .pareto-item.selected { background: rgba(59, 130, 246, 0.1); }
-
-    .pareto-rank {
-        width: 22px; height: 22px;
-        border-radius: 5px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 10px; font-weight: 700;
-        flex-shrink: 0;
-    }
-
-    .pareto-rank.rank-1 { background: rgba(239, 68, 68, 0.2); color: var(--red); }
-    .pareto-rank.rank-2 { background: rgba(245, 158, 11, 0.2); color: var(--amber); }
-    .pareto-rank.rank-3 { background: rgba(139, 92, 246, 0.2); color: var(--purple); }
-    .pareto-rank.default { background: rgba(100, 116, 139, 0.15); color: var(--text-muted); }
-
-    .pareto-info { flex: 1; min-width: 0; }
-    .pareto-event {
-        font-size: 11px; font-weight: 500; color: var(--text-primary);
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .pareto-meta { font-size: 9px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
-
-    .pareto-bar-wrapper { flex: 1; min-width: 100px; }
-
-    .pareto-bar-container {
-        height: 18px;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 4px;
-        overflow: hidden;
-        position: relative;
-    }
-
-    .pareto-bar { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
-
-    .pareto-bar.casepacker { background: linear-gradient(90deg, #f59e0b, rgba(245, 158, 11, 0.5)); }
-    .pareto-bar.capper { background: linear-gradient(90deg, #3b82f6, rgba(59, 130, 246, 0.5)); }
-    .pareto-bar.e80 { background: linear-gradient(90deg, #8b5cf6, rgba(139, 92, 246, 0.5)); }
-    .pareto-bar.lightcurtain { background: linear-gradient(90deg, #06b6d4, rgba(6, 182, 212, 0.5)); }
-    .pareto-bar.wrapper { background: linear-gradient(90deg, #ec4899, rgba(236, 72, 153, 0.5)); }
-    .pareto-bar.accumulator { background: linear-gradient(90deg, #10b981, rgba(16, 185, 129, 0.5)); }
-    .pareto-bar.processor { background: linear-gradient(90deg, #ef4444, rgba(239, 68, 68, 0.5)); }
-    .pareto-bar.filler { background: linear-gradient(90deg, #6366f1, rgba(99, 102, 241, 0.5)); }
-    .pareto-bar.other { background: linear-gradient(90deg, #64748b, rgba(100, 116, 139, 0.5)); }
-
-    .pareto-cumulative-line {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background: var(--amber);
-        z-index: 5;
-    }
-
-    .pareto-80-marker {
-        position: absolute;
-        right: 20%;
-        top: 0;
-        bottom: 0;
-        border-left: 2px dashed var(--red);
-        opacity: 0.5;
-    }
-
-    .pareto-80-label {
-        position: absolute;
-        right: 20%;
-        top: -18px;
-        transform: translateX(50%);
-        font-size: 9px;
-        color: var(--red);
-        font-weight: 600;
-    }
-
-    .pareto-value { font-size: 11px; font-weight: 700; width: 45px; text-align: right; flex-shrink: 0; }
-    .pareto-cumulative { font-size: 9px; color: var(--text-muted); width: 35px; text-align: right; flex-shrink: 0; }
-    .pareto-cumulative.past-80 { color: var(--red); font-weight: 600; }
-
-    /* Equipment Badge */
-    .equip-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 8px;
-        font-weight: 600;
-        text-transform: uppercase;
-    }
-
-    .equip-badge.casepacker { background: rgba(245, 158, 11, 0.2); color: var(--amber); }
-    .equip-badge.capper { background: rgba(59, 130, 246, 0.2); color: var(--blue); }
-    .equip-badge.e80 { background: rgba(139, 92, 246, 0.2); color: var(--purple); }
-    .equip-badge.lightcurtain { background: rgba(6, 182, 212, 0.2); color: var(--cyan); }
-    .equip-badge.wrapper { background: rgba(236, 72, 153, 0.2); color: var(--pink); }
-    .equip-badge.accumulator { background: rgba(16, 185, 129, 0.2); color: var(--green); }
-    .equip-badge.processor { background: rgba(239, 68, 68, 0.2); color: var(--red); }
-    .equip-badge.filler { background: rgba(99, 102, 241, 0.2); color: #6366f1; }
-    .equip-badge.other { background: rgba(100, 116, 139, 0.2); color: #64748b; }
-
-    /* Equipment Summary */
-    .equip-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
-
-    .equip-item {
-        display: flex; align-items: center; gap: 8px;
-        padding: 10px;
-        background: rgba(255, 255, 255, 0.02);
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.2s;
-        border: 1px solid transparent;
-    }
-
-    .equip-item:hover { background: rgba(255, 255, 255, 0.05); }
-    .equip-item.selected { border-color: var(--blue); background: rgba(59, 130, 246, 0.1); }
-
-    .equip-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-    .equip-info { flex: 1; }
-    .equip-name { font-size: 11px; color: var(--text-secondary); }
-    .equip-count { font-size: 9px; color: var(--text-muted); }
-    .equip-value { font-size: 12px; font-weight: 700; }
-
-    /* Trend Chart */
-    .trend-chart {
-        height: 180px;
-        display: flex;
-        align-items: flex-end;
-        gap: 4px;
-        padding-top: 20px;
-    }
-
-    .trend-bar-group {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 4px;
-    }
-
-    .trend-bar {
-        width: 100%;
-        max-width: 30px;
-        border-radius: 3px 3px 0 0;
-        transition: height 0.3s ease;
-        cursor: pointer;
-    }
-
-    .trend-bar:hover { opacity: 0.8; }
-
-    .trend-label {
-        font-size: 9px;
-        color: var(--text-muted);
-        text-align: center;
-        white-space: nowrap;
-    }
-
-    /* Timeline */
-    .timeline-container { position: relative; padding: 10px 0; }
-
-    .timeline-hours {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 8px;
-        padding: 0 2px;
-    }
-
-    .timeline-hour { font-size: 9px; color: var(--text-muted); }
-
-    .timeline-track {
-        height: 24px;
-        background: rgba(255, 255, 255, 0.03);
-        border-radius: 4px;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .timeline-event {
-        position: absolute;
-        top: 2px;
-        bottom: 2px;
-        border-radius: 3px;
-        cursor: pointer;
-        transition: opacity 0.2s;
-        min-width: 3px;
-    }
-
-    .timeline-event:hover { opacity: 0.8; }
-
-    /* Table */
-    .data-table { width: 100%; border-collapse: collapse; }
-
-    .data-table th {
-        text-align: left;
-        padding: 8px 10px;
-        font-size: 9px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: var(--text-muted);
-        border-bottom: 1px solid var(--border);
-        cursor: pointer;
-        white-space: nowrap;
-    }
-
-    .data-table th:hover { color: var(--text-secondary); }
-
-    .data-table td {
-        padding: 8px 10px;
-        font-size: 11px;
-        border-bottom: 1px solid var(--border);
-    }
-
-    .data-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
-
-    .table-container { max-height: 350px; overflow: auto; }
-
-    .line-badge {
-        display: inline-block;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 9px;
-        font-weight: 600;
-    }
-
-    .line-badge.line-a { background: rgba(59, 130, 246, 0.2); color: var(--blue); }
-    .line-badge.line-b { background: rgba(16, 185, 129, 0.2); color: var(--green); }
-    .line-badge.line-c { background: rgba(245, 158, 11, 0.2); color: var(--amber); }
-    .line-badge.line-d { background: rgba(236, 72, 153, 0.2); color: var(--pink); }
-
-    .duration-value { font-weight: 700; font-family: 'JetBrains Mono', monospace; }
-    .duration-value.high { color: var(--red); }
-    .duration-value.medium { color: var(--amber); }
-
-    /* Modal */
-    .modal-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.75);
-        backdrop-filter: blur(4px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-    }
-
-    .modal {
-        background: var(--bg-primary);
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        width: 90%;
-        max-width: 500px;
-        max-height: 85vh;
-        overflow: hidden;
-        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-    }
-
-    .modal-header {
-        padding: 14px 18px;
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .modal-title { font-weight: 700; font-size: 15px; }
-
-    .modal-close {
-        background: none;
-        border: none;
-        color: var(--text-muted);
-        cursor: pointer;
-        font-size: 18px;
-        padding: 4px 8px;
-        border-radius: 6px;
-    }
-
-    .modal-close:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
-
-    .modal-body { padding: 18px; max-height: 60vh; overflow-y: auto; }
-
-    .drop-zone {
-        border: 2px dashed var(--border);
-        border-radius: 12px;
-        padding: 30px 20px;
-        text-align: center;
-        cursor: pointer;
-        background: rgba(255, 255, 255, 0.02);
-        margin-bottom: 14px;
-        transition: all 0.3s;
-    }
-
-    .drop-zone:hover, .drop-zone.dragover {
-        border-color: var(--blue);
-        background: rgba(59, 130, 246, 0.05);
-    }
-
-    .drop-zone-icon { font-size: 28px; margin-bottom: 8px; opacity: 0.5; }
-    .drop-zone h3 { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
-    .drop-zone p { font-size: 10px; color: var(--text-muted); }
-
-    .modal-divider {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin: 14px 0;
-        color: var(--text-muted);
-        font-size: 10px;
-    }
-
-    .modal-divider::before, .modal-divider::after {
-        content: '';
-        flex: 1;
-        height: 1px;
-        background: var(--border);
-    }
-
-    .paste-area {
-        width: 100%;
-        min-height: 100px;
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 10px;
-        color: var(--text-primary);
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 10px;
-        resize: vertical;
-        margin-bottom: 10px;
-    }
-
-    .paste-area:focus { outline: none; border-color: var(--blue); }
-    .paste-area::placeholder { color: var(--text-muted); }
-
-    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
-
-    /* Recurring Badge */
-    .recurring-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
-        padding: 2px 5px;
-        border-radius: 4px;
-        font-size: 9px;
-        font-weight: 600;
-        background: rgba(239, 68, 68, 0.15);
-        color: var(--red);
-    }
-
-    /* TV Mode Toggle */
-    .tv-exit {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 100;
-    }
-
-    /* Tooltip */
-    .tooltip {
-        position: absolute;
-        background: var(--bg-primary);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 10px 12px;
-        font-size: 11px;
-        z-index: 1000;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-        pointer-events: none;
-        max-width: 250px;
-    }
-
-    .tooltip-title { font-weight: 600; margin-bottom: 4px; }
-    .tooltip-row { display: flex; justify-content: space-between; gap: 12px; color: var(--text-muted); }
-    .tooltip-value { color: var(--text-primary); font-weight: 500; }
-
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
-
-    .hidden { display: none !important; }
-
-    /* Status Indicator */
-    .status-bar {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 5px 10px;
-        background: rgba(255, 255, 255, 0.03);
-        border-radius: 6px;
-        font-size: 11px;
-        color: var(--text-muted);
-    }
-
-    .status-dot { width: 6px; height: 6px; border-radius: 50%; }
-    .status-dot.ready { background: var(--green); }
-    .status-dot.empty { background: var(--amber); }
-
-    /* View toggle */
-    .view-tabs {
-        display: flex;
-        gap: 2px;
-        background: rgba(255, 255, 255, 0.03);
-        padding: 2px;
-        border-radius: 6px;
-        border: 1px solid var(--border);
-    }
-
-    .view-tab {
-        padding: 5px 10px;
-        border-radius: 4px;
-        font-size: 10px;
-        font-weight: 600;
-        cursor: pointer;
-        color: var(--text-muted);
-        background: transparent;
-        border: none;
-        font-family: inherit;
-    }
-
-    .view-tab:hover { color: var(--text-secondary); }
-    .view-tab.active { background: rgba(59, 130, 246, 0.2); color: var(--blue); }
-</style>
-```
-
-</head>
-<body>
-    <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-left">
-                <div class="logo">📊</div>
-                <div>
-                    <h1 class="title">PLMS Command Center</h1>
-                    <p class="subtitle">Production Loss Management</p>
-                </div>
-            </div>
-            <div class="header-actions">
-                <div class="status-bar" id="statusBar">
-                    <span class="status-dot ready"></span>
-                    <span>Loading...</span>
-                </div>
-                <button class="btn btn-ghost btn-icon" onclick="toggleTheme()" title="Toggle theme">
-                    🌓
-                </button>
-                <button class="btn btn-ghost" onclick="enterTVMode()" title="TV Mode">
-                    📺 TV
-                </button>
-                <button class="btn btn-primary" onclick="openImportModal()">
-                    📁 Import
-                </button>
-                <button class="btn btn-ghost" id="exportBtn" onclick="exportData()">
-                    📥 Export
-                </button>
-            </div>
-        </header>
-
-```
-    <!-- Filters -->
-    <div class="filters-bar" id="filtersBar">
-        <div id="lineTabs" class="tabs"></div>
-
-        <div class="date-presets" id="datePresets">
-            <button class="date-preset" data-preset="7d">7 Days</button>
-            <button class="date-preset" data-preset="14d">14 Days</button>
-            <button class="date-preset" data-preset="30d">30 Days</button>
-            <button class="date-preset active" data-preset="all">All</button>
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, Cell, PieChart, Pie
+} from 'recharts';
+import { 
+  LayoutDashboard, Upload, Clock, Activity, Search, Filter, Zap, RotateCcw, X, CheckCircle2, Trash2, Calendar, BarChart2
+} from 'lucide-react';
+
+// --- Configuration & Helpers ---
+
+const parseDurationToMinutes = (durationStr) => {
+  if (!durationStr) return 0;
+  // Format is usually HH:MM:SS
+  const parts = durationStr.split(':').map(Number);
+  if (parts.length === 3) {
+    return (parts[0] * 60) + parts[1] + (parts[2] / 60);
+  }
+  return 0;
+};
+
+const parseStartTimeToMinutes = (timeStr) => {
+  if (!timeStr) return 0;
+  const parts = timeStr.split(':').map(Number);
+  if (parts.length >= 2) {
+    return (parts[0] * 60) + parts[1] + (parts[2] ? parts[2] / 60 : 0);
+  }
+  return 0;
+};
+
+const extractCategory = (description) => {
+  if (!description) return "Unknown";
+  if (description.includes(':')) {
+    return description.split(':')[0].trim();
+  }
+  if (description.toLowerCase().includes('dairy')) return "Dairy System";
+  if (description.toLowerCase().includes('motor')) return "Motors/Drives";
+  return "General / Process";
+};
+
+// --- Custom Components ---
+
+// 1. Hourly Heatmap Grid
+const HeatmapGrid = ({ data, type = 'count' }) => {
+  const maxValue = Math.max(...data.map(d => d[type])) || 1;
+  
+  const getColor = (value) => {
+    const intensity = value / maxValue;
+    if (value === 0) return 'bg-slate-50';
+    if (intensity < 0.25) return 'bg-indigo-100 text-indigo-900';
+    if (intensity < 0.5) return 'bg-indigo-300 text-indigo-900';
+    if (intensity < 0.75) return 'bg-indigo-500 text-white';
+    return 'bg-indigo-700 text-white';
+  };
+
+  return (
+    <div className="grid grid-cols-6 gap-2">
+      {data.map((hour) => (
+        <div 
+          key={hour.hour} 
+          className={`
+            ${getColor(hour[type])} 
+            rounded-lg p-2 text-center transition-all hover:scale-105 cursor-default relative group
+          `}
+        >
+          <div className="text-[10px] uppercase font-bold opacity-60 mb-1">
+            {hour.hour}:00
+          </div>
+          <div className="text-sm font-bold">
+            {type === 'duration' ? Math.round(hour[type]) : hour[type]}
+            <span className="text-[9px] font-normal opacity-70 ml-0.5">
+              {type === 'duration' ? 'm' : ''}
+            </span>
+          </div>
+          
+          {/* Tooltip */}
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-32 bg-slate-800 text-white text-xs rounded p-2 z-10 shadow-lg pointer-events-none">
+            <div className="font-bold">{hour.hour}:00 - {hour.hour + 1}:00</div>
+            <div>Events: {hour.count}</div>
+            <div>Downtime: {hour.duration.toFixed(1)}m</div>
+          </div>
         </div>
-
-        <div class="filter-group">
-            <input type="date" id="startDate" onchange="applyFilters()">
-            <span class="filter-label">to</span>
-            <input type="date" id="endDate" onchange="applyFilters()">
-        </div>
-
-        <div class="filter-group" id="equipmentFilter">
-            <select id="equipmentSelect" onchange="applyFilters()">
-                <option value="all">All Equipment</option>
-            </select>
-        </div>
-
-        <div class="view-tabs">
-            <button class="view-tab active" data-view="dashboard" onclick="setView('dashboard')">Dashboard</button>
-            <button class="view-tab" data-view="pareto" onclick="setView('pareto')">Pareto</button>
-            <button class="view-tab" data-view="trend" onclick="setView('trend')">Trend</button>
-            <button class="view-tab" data-view="table" onclick="setView('table')">Table</button>
-        </div>
-
-        <button class="btn btn-ghost" onclick="clearFilters()" style="margin-left:auto;">
-            ✕ Clear
-        </button>
+      ))}
     </div>
+  );
+};
 
-    <!-- Main Content -->
-    <div id="mainContent">
-        <!-- KPIs -->
-        <div class="kpi-grid" id="kpiGrid"></div>
-
-        <!-- Dashboard View -->
-        <div id="dashboardView">
-            <div class="main-grid">
-                <!-- Pareto -->
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">Top Loss Drivers</span>
-                        <div style="display:flex;gap:6px;align-items:center;">
-                            <span id="paretoFilterLabel" class="equip-badge other" style="display:none;"></span>
-                            <button class="btn btn-ghost" style="padding:4px 8px;font-size:10px;" onclick="clearEquipmentFilter()">Show All</button>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div id="paretoChart" class="pareto-bars"></div>
-                    </div>
-                </div>
-
-                <!-- Equipment Breakdown -->
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">By Equipment</span>
-                    </div>
-                    <div class="card-body">
-                        <div id="equipmentBreakdown" class="equip-grid"></div>
-                    </div>
-                </div>
-
-                <!-- Trend Chart -->
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">Daily Trend</span>
-                        <span class="filter-label" id="trendPeriod"></span>
-                    </div>
-                    <div class="card-body">
-                        <div id="trendChart" class="trend-chart"></div>
-                    </div>
-                </div>
-
-                <!-- Recurring Issues -->
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">Recurring Issues</span>
-                        <span class="recurring-badge">🔄 3+ occurrences</span>
-                    </div>
-                    <div class="card-body">
-                        <div id="recurringIssues"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Pareto View (Full) -->
-        <div id="paretoView" class="hidden">
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">Full Pareto Analysis</span>
-                    <span id="paretoCount" class="filter-label"></span>
-                </div>
-                <div class="card-body" style="position:relative;">
-                    <div class="pareto-80-label">80%</div>
-                    <div id="fullParetoChart" class="pareto-bars"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Trend View -->
-        <div id="trendView" class="hidden">
-            <div class="main-grid">
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">Downtime by Day</span>
-                    </div>
-                    <div class="card-body">
-                        <div id="fullTrendChart" class="trend-chart" style="height:280px;"></div>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">Timeline View</span>
-                        <select id="timelineDate" class="input" onchange="renderTimeline()"></select>
-                    </div>
-                    <div class="card-body">
-                        <div id="timelineView"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Table View -->
-        <div id="tableView" class="hidden">
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">Event Log</span>
-                    <input type="text" id="tableSearch" class="input" placeholder="Search..." style="width:180px;" oninput="renderTable()">
-                </div>
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th onclick="sortTable('date')">Date</th>
-                                <th onclick="sortTable('time')">Time</th>
-                                <th onclick="sortTable('line')">Line</th>
-                                <th onclick="sortTable('equipment')">Equipment</th>
-                                <th onclick="sortTable('event')">Event Description ↓</th>
-                                <th onclick="sortTable('duration')">Duration</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- TV Mode Exit -->
-<div class="tv-exit hidden" id="tvExit">
-    <button class="btn btn-danger" onclick="exitTVMode()">✕ Exit TV Mode</button>
-</div>
-
-<!-- Import Modal -->
-<div id="importModal" class="modal-overlay hidden" onclick="closeImportModal(event)">
-    <div class="modal" onclick="event.stopPropagation()">
-        <div class="modal-header">
-            <span class="modal-title">📁 Import Data</span>
-            <button class="modal-close" onclick="closeImportModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-                <div class="drop-zone-icon">📄</div>
-                <h3>Drop Excel file here or click to browse</h3>
-                <p>Supports .xlsx, .xls, .csv, .tsv</p>
-            </div>
-            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.tsv,.txt" style="display:none" onchange="handleFileSelect(event)">
-
-            <div class="modal-divider">or paste data</div>
-
-            <textarea id="pasteArea" class="paste-area" placeholder="Paste your data here (tab or comma separated)..."></textarea>
-
-            <div class="modal-actions">
-                <button class="btn btn-ghost" onclick="loadDemoData(); closeImportModal();">⚡ Load Demo</button>
-                <button class="btn btn-success" onclick="importPastedData()">Import</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Tooltip -->
-<div id="tooltip" class="tooltip hidden"></div>
-
-<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-
-<script>
-    // ═══════════════════════════════════════════════════════════════════════
-    // STATE
-    // ═══════════════════════════════════════════════════════════════════════
-    
-    let rawData = [];
-    let filteredData = [];
-    let activeLine = 'all';
-    let activeEquipment = 'all';
-    let currentView = 'dashboard';
-    let sortField = 'event';  // Changed: Default sort by event description
-    let sortDir = 'asc';      // Changed: Ascending for alphabetical
-    let datePreset = 'all';
-
-    const costRates = {
-        'LINE A': 1003.50, 'LINE B': 1003.50,
-        'LINE C': 1299.33, 'LINE D': 1299.33
-    };
-
-    const equipmentConfig = {
-        'Case Packer': { color: '#f59e0b', keywords: ['cbp htw', 'cbp', 'case packer'] },
-        'Capper': { color: '#3b82f6', keywords: ['cap30', 'cap 30', 'capper'] },
-        'E80': { color: '#8b5cf6', keywords: ['e80', 'turbo eagle', 'eagle'] },
-        'Light Curtain': { color: '#06b6d4', keywords: ['lc30', 'lc 30', 'light curtain', 'lcc'] },
-        'Wrapper': { color: '#ec4899', keywords: ['silkworm', 'wrapper', 'silk worm'] },
-        'Accumulator': { color: '#10b981', keywords: ['achx', 'accumulator', 'accum'] },
-        'Processor': { color: '#ef4444', keywords: ['dairy not ready', 'processor', 'waiting on batch', 'batch'] },
-        'Filler': { color: '#6366f1', keywords: ['filler', 'fill', 'preparation device', 'splicing', 'strip magazine', 'motor start', 'design correction'] },
-        'Other': { color: '#64748b', keywords: [] }
-    };
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // UTILITIES
-    // ═══════════════════════════════════════════════════════════════════════
-
-    const formatMoney = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
-    
-    const formatMinutes = (min) => {
-        if (min < 1) return '<1m';
-        if (min < 60) return Math.round(min) + 'm';
-        const hrs = Math.floor(min / 60);
-        const mins = Math.round(min % 60);
-        return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
-    };
-
-    const formatHours = (min) => (min / 60).toFixed(1) + 'h';
-
-    const parseDuration = (durStr) => {
-        if (!durStr) return 0;
-        if (typeof durStr === 'number') return durStr;
-        
-        const str = String(durStr).trim();
-        
-        // Handle H:MM:SS format
-        const parts = str.split(':');
-        if (parts.length === 3) {
-            const hours = parseInt(parts[0]) || 0;
-            const minutes = parseInt(parts[1]) || 0;
-            const seconds = parseInt(parts[2]) || 0;
-            return hours * 60 + minutes + seconds / 60;
-        }
-        if (parts.length === 2) {
-            const minutes = parseInt(parts[0]) || 0;
-            const seconds = parseInt(parts[1]) || 0;
-            return minutes + seconds / 60;
-        }
-        
-        return parseFloat(str) || 0;
-    };
-
-    const detectEquipment = (eventDesc) => {
-        if (!eventDesc) return 'Other';
-        const lower = eventDesc.toLowerCase();
-        
-        for (const [equip, config] of Object.entries(equipmentConfig)) {
-            if (equip === 'Other') continue;
-            for (const keyword of config.keywords) {
-                if (lower.includes(keyword)) return equip;
-            }
-        }
-        return 'Other';
-    };
-
-    const getEquipmentClass = (equip) => {
-        const classMap = {
-            'Case Packer': 'casepacker',
-            'Capper': 'capper',
-            'E80': 'e80',
-            'Light Curtain': 'lightcurtain',
-            'Wrapper': 'wrapper',
-            'Accumulator': 'accumulator',
-            'Processor': 'processor',
-            'Filler': 'filler',
-            'Other': 'other'
-        };
-        return classMap[equip] || 'other';
-    };
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // THEME & TV MODE
-    // ═══════════════════════════════════════════════════════════════════════
-
-    function toggleTheme() {
-        document.body.classList.toggle('light-theme');
-        localStorage.setItem('plms-theme', document.body.classList.contains('light-theme') ? 'light' : 'dark');
-    }
-
-    function enterTVMode() {
-        document.body.classList.add('tv-mode');
-        document.getElementById('tvExit').classList.remove('hidden');
-    }
-
-    function exitTVMode() {
-        document.body.classList.remove('tv-mode');
-        document.getElementById('tvExit').classList.add('hidden');
-    }
-
-    // Load saved theme
-    if (localStorage.getItem('plms-theme') === 'light') {
-        document.body.classList.add('light-theme');
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // MODAL
-    // ═══════════════════════════════════════════════════════════════════════
-
-    function openImportModal() {
-        document.getElementById('importModal').classList.remove('hidden');
-        document.getElementById('pasteArea').value = '';
-    }
-
-    function closeImportModal(event) {
-        if (event && event.target !== event.currentTarget) return;
-        document.getElementById('importModal').classList.add('hidden');
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // DATA PARSING
-    // ═══════════════════════════════════════════════════════════════════════
-
-    function parseData(text) {
-        const lines = text.trim().split('\n').filter(l => l.trim());
-        if (lines.length < 2) return [];
-
-        const firstLine = lines[0];
-        let delimiter = '\t';
-        if (!firstLine.includes('\t')) {
-            delimiter = firstLine.includes(',') ? ',' : ';';
-        }
-
-        const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
-        
-        // Find columns
-        const colIdx = {
-            date: headers.findIndex(h => h === 'date' || h.includes('date')),
-            time: headers.findIndex(h => h.includes('start time') || h === 'time' || h.includes('start')),
-            line: headers.findIndex(h => h.includes('line') || h.includes('machine')),
-            eventCode: headers.findIndex(h => h.includes('event code number') || h.includes('code number')),
-            event: headers.findIndex(h => h.includes('event code description') || h.includes('description') || h.includes('event')),
-            duration: headers.findIndex(h => h.includes('duration'))
-        };
-
-        // If event column not found, try alternatives
-        if (colIdx.event === -1) {
-            colIdx.event = headers.findIndex(h => h.includes('reason') || h.includes('cause'));
-        }
-
-        const data = [];
-        let currentDate = '';
-
-        for (let i = 1; i < lines.length; i++) {
-            const cols = lines[i].split(delimiter).map(c => c.trim().replace(/['"]/g, ''));
-            
-            // Forward-fill date
-            const dateVal = colIdx.date >= 0 ? cols[colIdx.date] : '';
-            if (dateVal && dateVal.trim()) {
-                currentDate = dateVal;
-            }
-
-            const timeVal = colIdx.time >= 0 ? cols[colIdx.time] : '';
-            let lineVal = colIdx.line >= 0 ? cols[colIdx.line] : '';
-            const eventCode = colIdx.eventCode >= 0 ? cols[colIdx.eventCode] : '';
-            const eventVal = colIdx.event >= 0 ? cols[colIdx.event] : '';
-            const durationVal = colIdx.duration >= 0 ? cols[colIdx.duration] : '';
-
-            // Normalize line
-            lineVal = normalizeLineName(lineVal);
-
-            // Parse duration
-            const duration = parseDuration(durationVal);
-
-            // Skip if no event or duration
-            if (!eventVal && !duration) continue;
-
-            // Detect equipment
-            const equipment = detectEquipment(eventVal);
-
-            // Parse date
-            let parsedDate = null;
-            if (currentDate) {
-                parsedDate = new Date(currentDate);
-                if (isNaN(parsedDate.getTime())) {
-                    const parts = currentDate.split(/[-\/]/);
-                    if (parts.length === 3) {
-                        parsedDate = new Date(parts[2], parts[0] - 1, parts[1]);
-                    }
-                }
-            }
-
-            data.push({
-                id: i,
-                date: currentDate,
-                parsedDate,
-                time: timeVal,
-                line: lineVal || 'UNKNOWN',
-                eventCode,
-                event: eventVal || 'Unknown Event',
-                duration,
-                equipment
-            });
-        }
-
-        // Sort by event description (alphabetically) by default
-        data.sort((a, b) => a.event.localeCompare(b.event));
-
-        return data;
-    }
-
-    function normalizeLineName(name) {
-        if (!name) return 'UNKNOWN';
-        const upper = name.toUpperCase().trim().replace(/\s+/g, ' ');
-        if (upper.includes('LINE A') || upper === 'A') return 'LINE A';
-        if (upper.includes('LINE B') || upper === 'B') return 'LINE B';
-        if (upper.includes('LINE C') || upper === 'C') return 'LINE C';
-        if (upper.includes('LINE D') || upper === 'D') return 'LINE D';
-        if (upper.includes('LINE')) return upper;
-        return upper;
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // FILE HANDLING
-    // ═══════════════════════════════════════════════════════════════════════
-
-    const dropZone = document.getElementById('dropZone');
-
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('dragover');
+// 2. Gantt Timeline Chart
+const TimelineChart = ({ data }) => {
+  // Group by Date
+  const groupedByDate = useMemo(() => {
+    const groups = {};
+    data.forEach(item => {
+      if (!groups[item.date]) groups[item.date] = [];
+      groups[item.date].push(item);
     });
+    // Sort dates
+    return Object.entries(groups).sort((a, b) => new Date(a[1][0].timestamp) - new Date(b[1][0].timestamp));
+  }, [data]);
 
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  const totalMinutesInDay = 24 * 60;
 
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('dragover');
-        const file = e.dataTransfer.files[0];
-        if (file) handleFile(file);
-    });
+  return (
+    <div className="space-y-4 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
+      {groupedByDate.map(([date, events]) => (
+        <div key={date} className="relative">
+          <div className="flex items-center mb-1">
+            <span className="text-xs font-bold text-slate-500 w-20 shrink-0">{date}</span>
+            <div className="flex-1 h-6 bg-slate-100 rounded-full relative overflow-hidden border border-slate-200">
+              {/* Hour markers */}
+              {[0, 6, 12, 18].map(h => (
+                <div key={h} className="absolute top-0 bottom-0 border-l border-slate-300 opacity-30" style={{ left: `${(h / 24) * 100}%` }}></div>
+              ))}
+              
+              {/* Event Bars */}
+              {events.map((ev) => {
+                const startMins = parseStartTimeToMinutes(ev.startTime);
+                const widthPercent = Math.min((ev.durationMinutes / totalMinutesInDay) * 100, 100);
+                const leftPercent = (startMins / totalMinutesInDay) * 100;
+                
+                // Minimum visual width (0.2%) so very short events are visible
+                const visualWidth = Math.max(widthPercent, 0.4);
 
-    async function handleFileSelect(event) {
-        const file = event.target.files[0];
-        if (file) handleFile(file);
-    }
+                let colorClass = 'bg-indigo-500';
+                if (ev.durationMinutes > 30) colorClass = 'bg-red-500';
+                else if (ev.durationMinutes > 10) colorClass = 'bg-amber-500';
 
-    async function handleFile(file) {
-        try {
-            let text;
-            if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-                const data = await file.arrayBuffer();
-                const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                text = XLSX.utils.sheet_to_csv(firstSheet);
-            } else {
-                text = await file.text();
-            }
-            
-            rawData = parseData(text);
-            if (rawData.length > 0) {
-                closeImportModal();
-                initializeDashboard();
-                saveToLocalStorage();
-            } else {
-                alert('No data found. Please check the file format.');
-            }
-        } catch (err) {
-            alert('Error parsing file: ' + err.message);
-        }
-    }
+                return (
+                  <div
+                    key={ev.id}
+                    className={`absolute top-0 bottom-0 ${colorClass} hover:brightness-110 cursor-pointer transition-all group`}
+                    style={{ 
+                      left: `${leftPercent}%`, 
+                      width: `${visualWidth}%` 
+                    }}
+                  >
+                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block w-48 bg-slate-900 text-white text-xs rounded p-2 z-20 shadow-xl pointer-events-none">
+                        <div className="font-bold text-indigo-300">{ev.startTime}</div>
+                        <div className="font-semibold">{ev.description}</div>
+                        <div className="mt-1 opacity-80">Duration: {ev.durationRaw}</div>
+                     </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ))}
+      <div className="flex pl-20 text-[10px] text-slate-400 justify-between px-1">
+        <span>00:00</span>
+        <span>06:00</span>
+        <span>12:00</span>
+        <span>18:00</span>
+        <span>23:59</span>
+      </div>
+    </div>
+  );
+};
 
-    function importPastedData() {
-        const text = document.getElementById('pasteArea').value.trim();
-        if (!text) {
-            alert('Please paste some data first.');
-            return;
-        }
-        
-        rawData = parseData(text);
-        if (rawData.length > 0) {
-            closeImportModal();
-            initializeDashboard();
-            saveToLocalStorage();
+// --- Main App ---
+
+export default function App() {
+  const [rawData, setRawData] = useState([]);
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [heatmapMetric, setHeatmapMetric] = useState('count'); // 'count' or 'duration'
+  
+  // Filters
+  const [selectedMachine, setSelectedMachine] = useState('All');
+  const [selectedEvent, setSelectedEvent] = useState(null); 
+
+  // --- CSV Parser with Forward Fill ---
+  const parseCustomCSV = (csvText) => {
+    const lines = csvText.split(/\r?\n/);
+    const data = [];
+    let lastDate = 'Unknown Date'; 
+
+    for (let i = 1; i < lines.length; i++) {
+      const rowRaw = lines[i];
+      if (!rowRaw.trim()) continue;
+
+      let row = [];
+      let inQuote = false;
+      let currentField = '';
+      
+      for (let charIndex = 0; charIndex < rowRaw.length; charIndex++) {
+        const char = rowRaw[charIndex];
+        if (char === '"') {
+          inQuote = !inQuote;
+        } else if (char === ',' && !inQuote) {
+          row.push(currentField);
+          currentField = '';
         } else {
-            alert('Could not parse the data. Please check the format.');
+          currentField += char;
         }
+      }
+      row.push(currentField); 
+
+      if (row.length < 5) continue; 
+
+      // Date Filling
+      let dateStr = row[0].trim();
+      let isFilled = false;
+      if (dateStr && dateStr.length > 0) {
+        lastDate = dateStr;
+      } else {
+        dateStr = lastDate;
+        isFilled = true; 
+      }
+
+      let description = row[4] ? row[4].replace(/^"|"$/g, '').replace(/""/g, '"').trim() : "Unknown";
+      let line = row[2] ? row[2].trim() : "Unknown Line";
+      
+      // Calculations
+      const durationMinutes = parseDurationToMinutes(row[5]);
+
+      // Date Parsing
+      const dateParts = dateStr.split('/'); 
+      let timestamp = 0;
+      if (dateParts.length === 3) {
+        timestamp = new Date(dateParts[2], dateParts[0] - 1, dateParts[1]).getTime();
+      }
+
+      // Hour Parsing
+      let hour = -1;
+      if (row[1]) {
+        const timeParts = row[1].split(':');
+        if (timeParts.length > 0) hour = parseInt(timeParts[0], 10);
+      }
+
+      data.push({
+        id: i,
+        date: dateStr, 
+        isFilled: isFilled, 
+        timestamp: timestamp,
+        startTime: row[1],
+        hour: hour,
+        line: line,
+        eventCode: row[3],
+        description: description,
+        category: extractCategory(description),
+        durationRaw: row[5],
+        durationMinutes: durationMinutes,
+        packages: parseInt(row[6]) || 0,
+      });
     }
+    return data;
+  };
 
-    function loadDemoData() {
-        const demoData = `Date	Start Time	Line 	Event Code Number	Event Code Description	Duration
-```
+  const MOCK_CSV_DATA = `Date,Start Time,Line ,Event Code Number,Event Code Description,Duration,Packages,Other Code,Original Event Code,Original Event Description,Information Events
+11/7/2025,04:33:11,Line A,573304300,"CBP HTW: Tray transport tray control - no tray ""B1321""",0:07:12,43,200,0,,
+,04:47:54,Line A,103781090,Dairy not ready,0:02:19,46,200,0,,
+,15:36:12,Line A,103399300,Motor start,0:00:21,42,300,0,,
+,15:47:46,Line A,573304310,"CBP HTW: Tray transport tray control - tray get stuck ""B1322""",0:12:23,42,200,0,,
+,18:27:40,Line A,573704010,"CBP HTW: Tray extractor - tray magazine empty ""B1332""",0:03:06,43,200,0,,
+,19:46:43,Line A,103781090,Dairy not ready,0:54:12,246,200,0,,`;
 
-11/7/2025	04:33:11	Line A	573304300	CBP HTW: Tray transport tray control - no tray “B1321”	0:07:12
-04:47:54	Line A	103781090	Dairy not ready	0:02:19
-15:36:12	Line A	103399300	Motor start	0:00:21
-15:47:46	Line A	573304310	CBP HTW: Tray transport tray control - tray get stuck “B1322”	0:12:23
-18:27:40	Line A	573704010	CBP HTW: Tray extractor - tray magazine empty “B1332”	0:03:06
-19:46:43	Line A	103781090	Dairy not ready	0:54:12
-21:09:54	Line A	677302730	E80 TURBO EAGLE: Dispenser Tout Overtravel_(A116)	0:04:13
-21:17:23	Line A	573308020	CBP HTW: Transport chain below - drive overload “Q1101”	0:17:45
-21:39:07	Line A	573303230	CBP HTW: Infeed pusher - drive overload “Q3001”	0:12:09
-21:53:54	Line A	573308020	CBP HTW: Transport chain below - drive overload “Q1101”	0:19:23
-22:16:42	Line A	573308220	CBP HTW: Edge flap folder left - drive not ready “Q1140”	0:28:26
-11/8/2025	00:16:01	Line A	573304300	CBP HTW: Tray transport tray control - no tray “B1321”	0:17:54
-00:36:11	Line A	573304300	CBP HTW: Tray transport tray control - no tray “B1321”	0:05:32
-01:03:12	Line A	573704010	CBP HTW: Tray extractor - tray magazine empty “B1332”	0:03:37
-01:14:00	Line A	103781090	Dairy not ready	0:08:49
-14:25:40	Line A	103316230	Design correction, folding flap servo fault	0:02:37
-14:28:17	Line A	103399300	Motor start	0:00:18
-14:30:40	Line A	103710260	Preparation device, packaging material not ready	0:48:17
-17:28:02	Line A	598701010	SILKWORM: A004.0-GEN-Inlet safety barrier tripped	0:05:51
-18:03:11	Line A	103311100	Strip magazine, full	0:12:48
-18:36:20	Line A	320750040	CAP30: Caps Magazine Empty	0:03:29
-19:34:13	Line A	103781090	Dairy not ready	1:06:33
-20:45:08	Line A	573300000	CBP HTW: CBP HTW EQUIPMENT STOP	0:13:45
-21:00:34	Line A	573300000	CBP HTW: CBP HTW EQUIPMENT STOP	0:03:11
-21:31:45	Line A	320340080	CAP30: Caps Overlapped / Blocked on Belt	0:05:40
-22:13:10	Line A	677302290	E80 TURBO EAGLE: Tout Transfer Ep1M2>>PI1M1_(A082)	0:11:38
-22:50:35	Line A	573308020	CBP HTW: Transport chain below - drive overload “Q1101”	0:12:04
-23:09:46	Line A	320300000	CAP30: Equipment stop	0:18:42
-23:33:02	Line A	573700000	CBP HTW: CBP HTW IDLE STOP	0:04:39
-11/9/2025	00:16:46	Line A	677300000	E80 TURBO EAGLE: EQUIPMENT_STOP	0:07:21
-01:27:38	Line A	201302000	EXTERNAL DATING UNIT	0:03:34
-01:38:53	Line A	573702010	CBP HTW: Manual step down	0:04:59
-01:53:52	Line A	320750040	CAP30: Caps Magazine Empty	0:04:44
-02:59:21	Line A	103310010	Splicing device	0:12:27
-06:59:06	Line A	573304210	CBP HTW: Cross feeding - conveyor belt - jam “B1332”	0:06:46
-07:13:07	Line A	301762020	LC30Plus: Count Photocell Jam On Lcc2	0:05:39
-07:20:09	Line A	103781090	Dairy not ready	0:30:39
-07:50:51	Line A	103781090	Dairy not ready	0:01:29
-07:52:20	Line A	103781090	Dairy not ready	0:00:11
-07:52:31	Line A	103781090	Dairy not ready	1:24:45
-09:22:22	Line A	573308110	CBP HTW: Transport chain - clearence control “B5020”	0:15:11
-10:22:09	Line A	573308230	CBP HTW: Edge flap folder left - drive overload “Q1140”	0:05:41
-10:40:37	Line A	573308110	CBP HTW: Transport chain - clearence control “B5020”	0:02:59
-11:55:34	Line A	573704010	CBP HTW: Tray extractor - tray magazine empty “B1332”	0:04:58
-12:23:02	Line A	210330730	ACHX: Fallen pack	0:06:26
-13:09:10	Line A	301761020	LC30Plus: Count Photocell Jam On Lcc1	0:04:28`;
+  useEffect(() => {
+    const data = parseCustomCSV(MOCK_CSV_DATA);
+    setRawData(data);
+  }, []);
 
-```
-        rawData = parseData(demoData);
-        initializeDashboard();
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setIsProcessing(true);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setTimeout(() => {
+            setRawData(parseCustomCSV(e.target.result));
+            setSelectedMachine('All');
+            setSelectedEvent(null);
+            setIsProcessing(false);
+        }, 300);
+      };
+      reader.readAsText(file);
     }
+  };
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // LOCAL STORAGE
-    // ═══════════════════════════════════════════════════════════════════════
-
-    function saveToLocalStorage() {
-        try {
-            localStorage.setItem('plms-data', JSON.stringify(rawData));
-        } catch (e) {
-            console.warn('Could not save to localStorage');
-        }
+  const handleClearData = () => {
+    if(window.confirm("Are you sure you want to clear all imported data?")) {
+      setRawData([]);
+      setSelectedMachine('All');
+      setSelectedEvent(null);
     }
+  };
 
-    function loadFromLocalStorage() {
-        try {
-            const saved = localStorage.getItem('plms-data');
-            if (saved) {
-                rawData = JSON.parse(saved);
-                // Restore parsed dates
-                rawData.forEach(d => {
-                    if (d.date) d.parsedDate = new Date(d.date);
-                });
-                if (rawData.length > 0) {
-                    return true;
-                }
-            }
-        } catch (e) {
-            console.warn('Could not load from localStorage');
-        }
-        return false;
+  // --- Filter Logic ---
+  
+  const filteredData = useMemo(() => {
+    let data = rawData;
+    if (selectedMachine !== 'All') data = data.filter(d => d.category === selectedMachine);
+    if (selectedEvent) data = data.filter(d => d.description === selectedEvent);
+    if (searchQuery && activeTab === 'data') {
+       data = data.filter(row => 
+        row.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        row.eventCode.includes(searchQuery)
+      );
     }
+    return data;
+  }, [rawData, selectedMachine, selectedEvent, searchQuery, activeTab]);
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // DASHBOARD INITIALIZATION
-    // ═══════════════════════════════════════════════════════════════════════
+  // --- Statistics Calculation ---
 
-    function initializeDashboard() {
-        document.getElementById('statusBar').innerHTML = `
-            <span class="status-dot ready"></span>
-            <span>${rawData.length} events</span>
-        `;
+  const stats = useMemo(() => {
+    if (filteredData.length === 0) return null;
 
-        renderLineTabs();
-        populateEquipmentFilter();
-        setupDatePresets();
-        applyFilters();
+    const totalEvents = filteredData.length;
+    const totalDuration = filteredData.reduce((acc, curr) => acc + curr.durationMinutes, 0);
+    const avgDuration = totalEvents > 0 ? totalDuration / totalEvents : 0;
+    
+    // Group by Description (Pareto)
+    const eventGroups = {};
+    filteredData.forEach(row => {
+      if (!eventGroups[row.description]) {
+        eventGroups[row.description] = { name: row.description, count: 0, duration: 0 };
+      }
+      eventGroups[row.description].count += 1;
+      eventGroups[row.description].duration += row.durationMinutes;
+    });
+
+    // Group by Date (Trend)
+    const dateGroups = {};
+    filteredData.forEach(row => {
+      const dateKey = row.date || 'Unknown';
+      if (!dateGroups[dateKey]) {
+        dateGroups[dateKey] = { date: dateKey, duration: 0, count: 0, timestamp: row.timestamp };
+      }
+      dateGroups[dateKey].duration += row.durationMinutes;
+      dateGroups[dateKey].count += 1;
+    });
+    const trendData = Object.values(dateGroups).sort((a,b) => a.timestamp - b.timestamp);
+
+    // Hourly Heatmap Data
+    const hourGroups = Array(24).fill(0).map((_, i) => ({ hour: i, count: 0, duration: 0 }));
+    filteredData.forEach(row => {
+      if (row.hour >= 0 && row.hour < 24) {
+        hourGroups[row.hour].count += 1;
+        hourGroups[row.hour].duration += row.durationMinutes;
+      }
+    });
+
+    // Group by Machine
+    const machineGroups = {};
+    filteredData.forEach(row => {
+        if(!machineGroups[row.category]) machineGroups[row.category] = 0;
+        machineGroups[row.category] += row.durationMinutes;
+    });
+    const machineDistribution = Object.entries(machineGroups).map(([name, value]) => ({ name, value }));
+
+    return {
+      totalEvents,
+      totalDuration,
+      avgDuration, 
+      paretoData: Object.values(eventGroups).sort((a,b) => b.duration - a.duration),
+      trendData,
+      hourData: hourGroups,
+      machineDistribution,
+      uniqueMachines: ['All', ...new Set(rawData.map(d => d.category))].filter(Boolean)
+    };
+  }, [filteredData, rawData]);
+
+  const handleBarClick = (data) => {
+    if (data && data.name) {
+      setSelectedEvent(selectedEvent === data.name ? null : data.name);
     }
+  };
 
-    function renderLineTabs() {
-        const lines = [...new Set(rawData.map(d => d.line))].filter(l => l !== 'UNKNOWN').sort();
-        document.getElementById('lineTabs').innerHTML = `
-            <button class="tab ${activeLine === 'all' ? 'active' : ''}" onclick="setLine('all')">All</button>
-            ${lines.map(l => `<button class="tab ${activeLine === l ? 'active' : ''}" onclick="setLine('${l}')">${l}</button>`).join('')}
-        `;
-    }
-
-    function populateEquipmentFilter() {
-        const equipments = [...new Set(rawData.map(d => d.equipment))].sort();
-        const select = document.getElementById('equipmentSelect');
-        select.innerHTML = `<option value="all">All Equipment</option>` + 
-            equipments.map(e => `<option value="${e}">${e}</option>`).join('');
-    }
-
-    function setupDatePresets() {
-        document.querySelectorAll('.date-preset').forEach(btn => {
-            btn.onclick = () => {
-                document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                datePreset = btn.dataset.preset;
-                applyDatePreset(datePreset);
-            };
-        });
-    }
-
-    function applyDatePreset(preset) {
-        const dates = rawData.filter(d => d.parsedDate).map(d => d.parsedDate);
-        if (dates.length === 0) return;
-
-        const maxDate = new Date(Math.max(...dates));
-        let minDate;
-
-        switch (preset) {
-            case '7d':
-                minDate = new Date(maxDate);
-                minDate.setDate(minDate.getDate() - 7);
-                break;
-            case '14d':
-                minDate = new Date(maxDate);
-                minDate.setDate(minDate.getDate() - 14);
-                break;
-            case '30d':
-                minDate = new Date(maxDate);
-                minDate.setDate(minDate.getDate() - 30);
-                break;
-            default:
-                document.getElementById('startDate').value = '';
-                document.getElementById('endDate').value = '';
-                applyFilters();
-                return;
-        }
-
-        document.getElementById('startDate').value = minDate.toISOString().split('T')[0];
-        document.getElementById('endDate').value = maxDate.toISOString().split('T')[0];
-        applyFilters();
-    }
-
-    function setLine(line) {
-        activeLine = line;
-        renderLineTabs();
-        applyFilters();
-    }
-
-    function setView(view) {
-        currentView = view;
-        document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
-        document.getElementById('dashboardView').classList.toggle('hidden', view !== 'dashboard');
-        document.getElementById('paretoView').classList.toggle('hidden', view !== 'pareto');
-        document.getElementById('trendView').classList.toggle('hidden', view !== 'trend');
-        document.getElementById('tableView').classList.toggle('hidden', view !== 'table');
-        
-        if (view === 'trend') renderTimeline();
-    }
-
-    function clearFilters() {
-        activeLine = 'all';
-        activeEquipment = 'all';
-        document.getElementById('startDate').value = '';
-        document.getElementById('endDate').value = '';
-        document.getElementById('equipmentSelect').value = 'all';
-        document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active'));
-        document.querySelector('.date-preset[data-preset="all"]').classList.add('active');
-        renderLineTabs();
-        applyFilters();
-    }
-
-    function clearEquipmentFilter() {
-        activeEquipment = 'all';
-        document.getElementById('equipmentSelect').value = 'all';
-        document.getElementById('paretoFilterLabel').style.display = 'none';
-        applyFilters();
-    }
-
-    function filterByEquipment(equip) {
-        activeEquipment = equip;
-        document.getElementById('equipmentSelect').value = equip;
-        document.getElementById('paretoFilterLabel').textContent = equip;
-        document.getElementById('paretoFilterLabel').className = `equip-badge ${getEquipmentClass(equip)}`;
-        document.getElementById('paretoFilterLabel').style.display = 'inline-flex';
-        applyFilters();
-    }
-
-    function applyFilters() {
-        const startDate = document.getElementById('startDate').value;
-        const endDate = document.getElementById('endDate').value;
-        activeEquipment = document.getElementById('equipmentSelect').value;
-
-        filteredData = rawData.filter(d => {
-            if (activeLine !== 'all' && d.line !== activeLine) return false;
-            if (activeEquipment !== 'all' && d.equipment !== activeEquipment) return false;
-            if (startDate && d.parsedDate && d.parsedDate < new Date(startDate)) return false;
-            if (endDate && d.parsedDate) {
-                const end = new Date(endDate);
-                end.setHours(23, 59, 59);
-                if (d.parsedDate > end) return false;
-            }
-            return true;
-        });
-
-        renderKPIs();
-        renderParetoChart();
-        renderEquipmentBreakdown();
-        renderTrendChart();
-        renderRecurringIssues();
-        renderFullPareto();
-        renderTable();
-        if (currentView === 'trend') renderTimeline();
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // RENDERERS
-    // ═══════════════════════════════════════════════════════════════════════
-
-    function renderKPIs() {
-        const totalDuration = filteredData.reduce((acc, d) => acc + d.duration, 0);
-        const eventCount = filteredData.length;
-        const mttr = eventCount > 0 ? totalDuration / eventCount : 0;
-        
-        const cost = filteredData.reduce((acc, d) => {
-            const rate = costRates[d.line] || 1000;
-            return acc + (d.duration / 60) * rate;
-        }, 0);
-
-        // Get unique days
-        const uniqueDays = new Set(filteredData.map(d => d.date)).size;
-        const avgPerDay = uniqueDays > 0 ? totalDuration / uniqueDays : 0;
-
-        // Target MTTR
-        const targetMTTR = 15;
-        let score = mttr > 0 ? Math.max(0, Math.min(100, 100 - ((mttr - targetMTTR) / targetMTTR) * 50)) : 100;
-        const scoreClass = score >= 80 ? 'green' : score >= 60 ? 'amber' : 'red';
-
-        document.getElementById('kpiGrid').innerHTML = `
-            <div class="kpi-card">
-                <div class="kpi-label">Performance</div>
-                <div class="kpi-value ${scoreClass}">${Math.round(score)}</div>
-                <div class="progress-bar"><div class="progress-fill ${scoreClass}" style="width:${score}%"></div></div>
-                <div class="kpi-sub">vs ${targetMTTR}m target MTTR</div>
+  // --- Empty State ---
+  if (rawData.length === 0) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <div className="bg-indigo-100 p-4 rounded-full inline-flex mb-6">
+            <Activity className="w-12 h-12 text-indigo-600" />
+          </div>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">OEE<span className="text-indigo-600">Sight</span></h1>
+          <p className="text-slate-500 mb-8">
+            Manufacturing Intelligence Dashboard. Import your CSV data to analyze downtime events, gantt timelines, and heatmaps.
+          </p>
+          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-indigo-300 border-dashed rounded-lg cursor-pointer bg-white hover:bg-indigo-50 transition-colors">
+            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+              {isProcessing ? <Activity className="w-8 h-8 text-indigo-500 animate-spin mb-2" /> : <Upload className="w-8 h-8 text-indigo-500 mb-2" />}
+              <p className="text-sm text-slate-700 font-medium">{isProcessing ? "Processing..." : "Click to Upload CSV"}</p>
             </div>
-            <div class="kpi-card">
-                <div class="kpi-label">Total Loss</div>
-                <div class="kpi-value red">${formatMoney(cost)}</div>
-                <div class="kpi-sub">${formatHours(totalDuration)} downtime</div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-label">Total Downtime</div>
-                <div class="kpi-value blue">${formatMinutes(totalDuration)}</div>
-                <div class="kpi-sub">${eventCount} events</div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-label">MTTR</div>
-                <div class="kpi-value ${mttr <= targetMTTR ? 'green' : 'amber'}">${formatMinutes(mttr)}</div>
-                <div class="kpi-sub">Avg time to recover</div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-label">Daily Avg</div>
-                <div class="kpi-value purple">${formatMinutes(avgPerDay)}</div>
-                <div class="kpi-sub">${uniqueDays} days analyzed</div>
-            </div>
-        `;
-    }
+            <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
+          </label>
+        </div>
+      </div>
+    );
+  }
 
-    function getParetoData() {
-        const eventSums = {};
-        filteredData.forEach(d => {
-            const key = d.event;
-            if (!eventSums[key]) {
-                eventSums[key] = { event: d.event, duration: 0, count: 0, equipment: d.equipment, eventCode: d.eventCode };
-            }
-            eventSums[key].duration += d.duration;
-            eventSums[key].count += 1;
-        });
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      
+      {/* Top Navigation */}
+      <nav className="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center gap-3">
+              <div className="bg-indigo-600 p-2 rounded-lg">
+                <Activity className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <span className="font-bold text-xl text-slate-800 tracking-tight block leading-none">OEE<span className="text-indigo-600">Sight</span></span>
+                <span className="text-[10px] text-slate-400 font-medium tracking-wide">INTELLIGENT MANUFACTURING</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="hidden md:flex bg-slate-100 rounded-lg p-1">
+                <button 
+                  onClick={() => setActiveTab('dashboard')}
+                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Dashboard
+                </button>
+                <button 
+                  onClick={() => setActiveTab('data')}
+                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'data' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Raw Logs
+                </button>
+              </div>
+              <button onClick={handleClearData} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Clear All Data">
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
 
-        const sorted = Object.values(eventSums).sort((a, b) => b.duration - a.duration);
-        const total = sorted.reduce((acc, d) => acc + d.duration, 0);
-        
-        let cumulative = 0;
-        return sorted.map(d => {
-            cumulative += d.duration;
-            return { ...d, cumPercent: total > 0 ? (cumulative / total) * 100 : 0 };
-        });
-    }
+      {/* Main Container */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-    function renderParetoChart() {
-        const paretoData = getParetoData().slice(0, 10);
-        const maxDuration = Math.max(...paretoData.map(d => d.duration), 1);
-        
-        document.getElementById('paretoChart').innerHTML = paretoData.length ? paretoData.map((d, i) => `
-            <div class="pareto-item" onclick="filterByEquipment('${d.equipment}')">
-                <div class="pareto-rank ${i < 3 ? 'rank-' + (i+1) : 'default'}">${i + 1}</div>
-                <div class="pareto-info">
-                    <div class="pareto-event">${d.event}</div>
-                    <div class="pareto-meta">
-                        <span>${d.count}x</span>
-                        <span class="equip-badge ${getEquipmentClass(d.equipment)}">${d.equipment}</span>
+        {/* Filters Bar */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+           <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto no-scrollbar">
+              <Filter className="w-4 h-4 text-slate-400 mr-2" />
+              {stats?.uniqueMachines.map(m => (
+                <button 
+                  key={m} 
+                  onClick={() => { setSelectedMachine(m); setSelectedEvent(null); }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border ${selectedMachine === m ? 'bg-indigo-100 text-indigo-700 border-indigo-200 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'}`}
+                >
+                  {m}
+                </button>
+              ))}
+           </div>
+           
+           {selectedEvent && (
+             <div className="flex items-center gap-2 bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg border border-amber-200 text-sm animate-fade-in">
+                <span className="font-semibold">Drilldown:</span> {selectedEvent.substring(0, 30)}...
+                <button onClick={() => setSelectedEvent(null)}><X className="w-4 h-4 hover:bg-amber-100 rounded-full" /></button>
+             </div>
+           )}
+        </div>
+
+        {activeTab === 'dashboard' && stats ? (
+          <div className="space-y-6">
+            
+            {/* KPI Row (Cleaned up) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-3 opacity-5 text-indigo-600"><Clock className="w-24 h-24" /></div>
+                <div className="flex justify-between items-center relative z-10">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Total Downtime</p>
+                    <h3 className="text-2xl font-bold text-slate-800">{stats.totalDuration.toFixed(0)} min</h3>
+                  </div>
+                  <div className="p-2 rounded-lg bg-indigo-100 text-indigo-600"><Clock className="w-5 h-5" /></div>
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-3 opacity-5 text-orange-600"><Zap className="w-24 h-24" /></div>
+                <div className="flex justify-between items-center relative z-10">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Events</p>
+                    <h3 className="text-2xl font-bold text-slate-800">{stats.totalEvents}</h3>
+                  </div>
+                  <div className="p-2 rounded-lg bg-orange-100 text-orange-600"><Zap className="w-5 h-5" /></div>
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-3 opacity-5 text-emerald-600"><RotateCcw className="w-24 h-24" /></div>
+                <div className="flex justify-between items-center relative z-10">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">MTTR</p>
+                    <h3 className="text-2xl font-bold text-slate-800">{stats.avgDuration.toFixed(1)} min</h3>
+                  </div>
+                  <div className="p-2 rounded-lg bg-emerald-100 text-emerald-600"><RotateCcw className="w-5 h-5" /></div>
+                </div>
+              </div>
+            </div>
+
+            {/* GANTT TIMELINE VIEW */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+               <SectionHeader title="Timeline View" subtitle="Visualizing machine stops throughout the day" />
+               <TimelineChart data={filteredData} />
+            </div>
+
+            {/* Charts Row: Heatmap & Frequency Pareto */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+               {/* Hourly Heatmap */}
+               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <SectionHeader title="Hourly Heatmap" subtitle="When do failures occur?" />
+                    <div className="flex bg-slate-100 rounded-lg p-0.5">
+                      <button 
+                        onClick={() => setHeatmapMetric('count')} 
+                        className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${heatmapMetric === 'count' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}
+                      >
+                        Frequency
+                      </button>
+                      <button 
+                        onClick={() => setHeatmapMetric('duration')} 
+                        className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${heatmapMetric === 'duration' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}
+                      >
+                        Downtime
+                      </button>
                     </div>
-                </div>
-                <div class="pareto-bar-wrapper">
-                    <div class="pareto-bar-container">
-                        <div class="pareto-bar ${getEquipmentClass(d.equipment)}" style="width:${(d.duration / maxDuration) * 100}%"></div>
-                    </div>
-                </div>
-                <div class="pareto-value">${formatMinutes(d.duration)}</div>
-                <div class="pareto-cumulative ${d.cumPercent >= 80 ? 'past-80' : ''}">${d.cumPercent.toFixed(0)}%</div>
+                  </div>
+                  <HeatmapGrid data={stats.hourData} type={heatmapMetric} />
+               </div>
+
+               {/* Pareto Frequency */}
+               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                   <div className="flex items-center justify-between mb-2">
+                     <SectionHeader title="Downtime Pareto" subtitle="Top 10 Downtime Drivers" />
+                   </div>
+                   <div className="h-80">
+                     <ResponsiveContainer width="100%" height="100%">
+                       <BarChart 
+                          data={stats.paretoData.slice(0, 10)} 
+                          layout="vertical"
+                          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                          onClick={(data) => {
+                            if (data && data.activePayload) handleBarClick(data.activePayload[0].payload);
+                          }}
+                       >
+                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                         <XAxis type="number" hide />
+                         <YAxis type="category" dataKey="name" width={200} tick={{fontSize: 10, fill: '#475569'}} interval={0} />
+                         <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px'}} formatter={(value) => [`${value.toFixed(1)} min`, 'Duration']} />
+                         <Bar dataKey="duration" radius={[0, 4, 4, 0]} barSize={20}>
+                            {stats.paretoData.slice(0, 10).map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={selectedEvent === entry.name ? '#f59e0b' : '#4f46e5'} className="cursor-pointer hover:opacity-80" />
+                            ))}
+                         </Bar>
+                       </BarChart>
+                     </ResponsiveContainer>
+                   </div>
+               </div>
             </div>
-        `).join('') : '<div style="text-align:center;color:var(--text-muted);padding:20px;">No data</div>';
-    }
 
-    function renderEquipmentBreakdown() {
-        const equipSums = {};
-        filteredData.forEach(d => {
-            if (!equipSums[d.equipment]) equipSums[d.equipment] = { duration: 0, count: 0 };
-            equipSums[d.equipment].duration += d.duration;
-            equipSums[d.equipment].count += 1;
-        });
-
-        const sorted = Object.entries(equipSums).sort((a, b) => b[1].duration - a[1].duration);
-        
-        document.getElementById('equipmentBreakdown').innerHTML = sorted.map(([equip, data]) => `
-            <div class="equip-item ${activeEquipment === equip ? 'selected' : ''}" onclick="filterByEquipment('${equip}')">
-                <div class="equip-dot" style="background:${equipmentConfig[equip]?.color || '#64748b'}"></div>
-                <div class="equip-info">
-                    <div class="equip-name">${equip}</div>
-                    <div class="equip-count">${data.count} events</div>
+          </div>
+        ) : activeTab === 'data' && stats ? (
+          <div className="space-y-4">
+             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                  <input type="text" placeholder="Search logs..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" />
                 </div>
-                <div class="equip-value">${formatMinutes(data.duration)}</div>
-            </div>
-        `).join('') || '<div style="text-align:center;color:var(--text-muted);padding:20px;grid-column:span 2;">No data</div>';
-    }
-
-    function renderTrendChart() {
-        const dateSums = {};
-        filteredData.forEach(d => {
-            if (!d.date) return;
-            if (!dateSums[d.date]) dateSums[d.date] = 0;
-            dateSums[d.date] += d.duration;
-        });
-
-        const sorted = Object.entries(dateSums).sort((a, b) => new Date(a[0]) - new Date(b[0]));
-        const maxDuration = Math.max(...sorted.map(d => d[1]), 1);
-
-        const formatDateLabel = (dateStr) => {
-            const d = new Date(dateStr);
-            return `${d.getMonth() + 1}/${d.getDate()}`;
-        };
-
-        document.getElementById('trendPeriod').textContent = sorted.length ? `${sorted.length} days` : '';
-
-        const chartContainer = document.getElementById('trendChart');
-        chartContainer.innerHTML = sorted.length ? sorted.map(([date, dur]) => `
-            <div class="trend-bar-group">
-                <div class="trend-bar" style="height:${(dur / maxDuration) * 150}px;background:var(--blue);" title="${date}: ${formatMinutes(dur)}"></div>
-                <div class="trend-label">${formatDateLabel(date)}</div>
-            </div>
-        `).join('') : '<div style="text-align:center;color:var(--text-muted);width:100%;">No trend data</div>';
-
-        // Also render full trend chart
-        document.getElementById('fullTrendChart').innerHTML = chartContainer.innerHTML;
-    }
-
-    function renderRecurringIssues() {
-        const eventCounts = {};
-        filteredData.forEach(d => {
-            if (!eventCounts[d.event]) eventCounts[d.event] = { count: 0, duration: 0, equipment: d.equipment };
-            eventCounts[d.event].count += 1;
-            eventCounts[d.event].duration += d.duration;
-        });
-
-        const recurring = Object.entries(eventCounts)
-            .filter(([_, data]) => data.count >= 3)
-            .sort((a, b) => b[1].count - a[1].count)
-            .slice(0, 5);
-
-        document.getElementById('recurringIssues').innerHTML = recurring.length ? recurring.map(([event, data]) => `
-            <div class="pareto-item" style="margin-bottom:6px;">
-                <div class="pareto-rank default" style="background:rgba(239,68,68,0.2);color:var(--red);">${data.count}x</div>
-                <div class="pareto-info">
-                    <div class="pareto-event">${event}</div>
-                    <div class="pareto-meta">
-                        <span class="equip-badge ${getEquipmentClass(data.equipment)}">${data.equipment}</span>
-                    </div>
+                <div className="flex items-center gap-2 text-sm text-slate-500 font-semibold">{filteredData.length} records</div>
+             </div>
+             <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-start gap-2 text-sm text-blue-700">
+                <CheckCircle2 className="w-5 h-5 text-blue-500 shrink-0" />
+                <p>Dates automatically filled from previous rows.</p>
+             </div>
+             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Time</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Line</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Description</th>
+                        <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Duration</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-slate-200">
+                      {filteredData.map((row) => (
+                        <tr key={row.id} className="hover:bg-slate-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                            <div className="flex items-center gap-2"><span className="font-medium text-indigo-700">{row.date}</span>{row.isFilled && <span className="text-[10px] bg-slate-100 text-slate-400 px-1 rounded border">filled</span>}</div>
+                            <div className="text-xs text-slate-400">{row.startTime}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{row.line}</td>
+                          <td className="px-6 py-4 text-sm text-slate-700 max-w-lg"><div className="truncate" title={row.description}>{row.description}</div></td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">{row.durationRaw}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div class="pareto-value">${formatMinutes(data.duration)}</div>
-            </div>
-        `).join('') : '<div style="text-align:center;color:var(--text-muted);padding:20px;">No recurring issues (3+) found</div>';
-    }
+             </div>
+          </div>
+        ) : null}
+      </main>
+    </div>
+  );
+}
 
-    function renderFullPareto() {
-        const paretoData = getParetoData().slice(0, 25);
-        const maxDuration = Math.max(...paretoData.map(d => d.duration), 1);
-        
-        document.getElementById('paretoCount').textContent = `${paretoData.length} unique events`;
-        
-        document.getElementById('fullParetoChart').innerHTML = paretoData.map((d, i) => `
-            <div class="pareto-item">
-                <div class="pareto-rank ${i < 3 ? 'rank-' + (i+1) : 'default'}">${i + 1}</div>
-                <div class="pareto-info">
-                    <div class="pareto-event">${d.event}</div>
-                    <div class="pareto-meta">
-                        <span>${d.count}x</span>
-                        <span class="equip-badge ${getEquipmentClass(d.equipment)}">${d.equipment}</span>
-                    </div>
-                </div>
-                <div class="pareto-bar-wrapper">
-                    <div class="pareto-bar-container">
-                        <div class="pareto-bar ${getEquipmentClass(d.equipment)}" style="width:${(d.duration / maxDuration) * 100}%"></div>
-                        ${d.cumPercent >= 80 && i > 0 ? '<div class="pareto-80-marker" style="left:' + (80 * (maxDuration / d.duration)) + '%;"></div>' : ''}
-                    </div>
-                </div>
-                <div class="pareto-value">${formatMinutes(d.duration)}</div>
-                <div class="pareto-cumulative ${d.cumPercent >= 80 ? 'past-80' : ''}">${d.cumPercent.toFixed(0)}%</div>
-            </div>
-        `).join('');
-    }
+const SectionHeader = ({ title, subtitle }) => (
+  <div className="mb-4">
+    <h2 className="text-lg font-bold text-slate-800">{title}</h2>
+    {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
+  </div>
+);
 
-    function renderTimeline() {
-        const dates = [...new Set(filteredData.map(d => d.date))].filter(d => d).sort();
-        const select = document.getElementById('timelineDate');
-        
-        if (!select.options.length || select.options[0].value !== dates[0]) {
-            select.innerHTML = dates.map(d => `<option value="${d}">${d}</option>`).join('');
-        }
 
-        const selectedDate = select.value || dates[0];
-        const dayEvents = filteredData.filter(d => d.date === selectedDate);
-
-        const parseTime = (timeStr) => {
-            if (!timeStr) return 0;
-            const parts = timeStr.split(':');
-            return (parseInt(parts[0]) || 0) + (parseInt(parts[1]) || 0) / 60;
-        };
-
-        const container = document.getElementById('timelineView');
-        
-        if (!dayEvents.length) {
-            container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px;">No events for this day</div>';
-            return;
-        }
-
-        const hours = Array.from({length: 25}, (_, i) => i);
-        
-        container.innerHTML = `
-            <div class="timeline-container">
-                <div class="timeline-hours">
-                    ${[0, 6, 12, 18, 24].map(h => `<span class="timeline-hour">${h}:00</span>`).join('')}
-                </div>
-                <div class="timeline-track">
-                    ${dayEvents.map(e => {
-                        const startHour = parseTime(e.time);
-                        const durationHours = e.duration / 60;
-                        const left = (startHour / 24) * 100;
-                        const width = Math.max((durationHours / 24) * 100, 0.5);
-                        return `<div class="timeline-event" style="left:${left}%;width:${width}%;background:${equipmentConfig[e.equipment]?.color || '#64748b'};" title="${e.time} - ${e.event} (${formatMinutes(e.duration)})"></div>`;
-                    }).join('')}
-                </div>
-            </div>
-            <div style="margin-top:12px;font-size:11px;color:var(--text-muted);">
-                ${dayEvents.length} events · ${formatMinutes(dayEvents.reduce((a, d) => a + d.duration, 0))} total downtime
-            </div>
-        `;
-    }
-
-    function renderTable() {
-        const searchTerm = (document.getElementById('tableSearch')?.value || '').toLowerCase();
-        
-        let data = [...filteredData];
-        if (searchTerm) {
-            data = data.filter(d => 
-                d.event.toLowerCase().includes(searchTerm) ||
-                d.line.toLowerCase().includes(searchTerm) ||
-                d.equipment.toLowerCase().includes(searchTerm)
-            );
-        }
-
-        // Sort by event description by default (alphabetically)
-        data.sort((a, b) => {
-            let aVal = a[sortField], bVal = b[sortField];
-            if (typeof aVal === 'string') return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-            return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
-        });
-
-        document.getElementById('tableBody').innerHTML = data.slice(0, 200).map(d => {
-            const lineClass = d.line.toLowerCase().replace(/\s+/g, '-');
-            const durationClass = d.duration > 30 ? 'high' : d.duration > 15 ? 'medium' : '';
-            return `
-                <tr>
-                    <td style="font-family:'JetBrains Mono',monospace;color:var(--text-muted);font-size:10px;">${d.date}</td>
-                    <td style="font-family:'JetBrains Mono',monospace;color:var(--text-muted);font-size:10px;">${d.time}</td>
-                    <td><span class="line-badge ${lineClass}">${d.line}</span></td>
-                    <td><span class="equip-badge ${getEquipmentClass(d.equipment)}">${d.equipment}</span></td>
-                    <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.event}">${d.event}</td>
-                    <td><span class="duration-value ${durationClass}">${formatMinutes(d.duration)}</span></td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    function sortTable(field) {
-        if (sortField === field) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-        else { sortField = field; sortDir = field === 'event' ? 'asc' : 'desc'; }
-        renderTable();
-    }
-
-    function exportData() {
-        const headers = ['Date', 'Time', 'Line', 'Equipment', 'Event Code', 'Event Description', 'Duration (min)'];
-        const rows = filteredData.map(d => [d.date, d.time, d.line, d.equipment, d.eventCode, d.event, d.duration.toFixed(1)]);
-        
-        const wsData = [headers, ...rows];
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Downtime Data');
-        XLSX.writeFile(wb, 'plms_export.xlsx');
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // AUTO-INITIALIZE ON LOAD
-    // ═══════════════════════════════════════════════════════════════════════
-
-    // Try to load from localStorage first, otherwise load demo data
-    if (!loadFromLocalStorage()) {
-        loadDemoData();
-    } else {
-        initializeDashboard();
-    }
-</script>
-```
-
-</body>
-</html>
