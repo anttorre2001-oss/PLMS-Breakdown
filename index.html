@@ -40,6 +40,9 @@
     <!-- Babel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 
+    <!-- SheetJS (XLSX) for Excel Import -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <style>
         /* Custom Scrollbar */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -320,30 +323,54 @@
 
             const handleFileUpload = (event) => {
                 const files = Array.from(event.target.files);
+                if (!files.length) return;
+
                 setIsProcessing(true);
                 
                 setTimeout(() => {
                     const newFiles = [];
                     let processedCount = 0;
 
+                    const processFile = (file, content) => {
+                        const parsedData = parseCSV(content, file.name);
+                        newFiles.push({
+                            id: Math.random().toString(36).substr(2, 9),
+                            name: file.name,
+                            data: parsedData
+                        });
+                        processedCount++;
+                        if (processedCount === files.length) {
+                            setUploadedFiles(prev => [...prev, ...newFiles]);
+                            setIsProcessing(false);
+                            // Reset input
+                            event.target.value = null; 
+                        }
+                    };
+
                     files.forEach(file => {
                         const reader = new FileReader();
-                        reader.onload = (e) => {
-                            const parsedData = parseCSV(e.target.result, file.name);
-                            newFiles.push({
-                                id: Math.random().toString(36).substr(2, 9),
-                                name: file.name,
-                                data: parsedData
-                            });
-                            processedCount++;
-                            if (processedCount === files.length) {
-                                setUploadedFiles(prev => [...prev, ...newFiles]);
-                                setIsProcessing(false);
-                            }
-                        };
-                        reader.readAsText(file);
+                        
+                        // Handle Excel files
+                        if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                            reader.onload = (e) => {
+                                const data = new Uint8Array(e.target.result);
+                                const workbook = XLSX.read(data, {type: 'array'});
+                                const firstSheetName = workbook.SheetNames[0];
+                                const worksheet = workbook.Sheets[firstSheetName];
+                                const csvContent = XLSX.utils.sheet_to_csv(worksheet);
+                                processFile(file, csvContent);
+                            };
+                            reader.readAsArrayBuffer(file);
+                        } 
+                        // Handle CSV files
+                        else {
+                            reader.onload = (e) => {
+                                processFile(file, e.target.result);
+                            };
+                            reader.readAsText(file);
+                        }
                     });
-                }, 500); // Simulate processing delay
+                }, 500); 
             };
 
             const removeFile = (fileId) => {
@@ -623,10 +650,10 @@
                                                 ) : (
                                                     <IconUpload className="w-10 h-10 text-indigo-500 mb-3" />
                                                 )}
-                                                <p className="text-sm font-semibold text-slate-700">{isProcessing ? 'Processing Data...' : 'Click to Upload CSV Files'}</p>
-                                                <p className="text-xs text-slate-500 mt-2">Supports multi-file upload. System will auto-detect "Line" column.</p>
+                                                <p className="text-sm font-semibold text-slate-700">{isProcessing ? 'Processing Data...' : 'Click to Upload Excel or CSV'}</p>
+                                                <p className="text-xs text-slate-500 mt-2">Supports .xlsx, .xls, .csv</p>
                                             </div>
-                                            <input type="file" multiple accept=".csv" onChange={handleFileUpload} className="hidden" disabled={isProcessing} />
+                                            <input type="file" multiple accept=".csv, .xlsx, .xls" onChange={handleFileUpload} className="hidden" disabled={isProcessing} />
                                         </label>
                                     </div>
 
