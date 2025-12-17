@@ -242,13 +242,41 @@
             const [dataLoaded, setDataLoaded] = useState(false);
             const [saveStatus, setSaveStatus] = useState('Idle');
             
+            // SMART PARSING LOGIC FOR VARIABLE REPORT FORMATS
             const parseCSV = (csvText, fileName) => {
                 const lines = csvText.split(/\r?\n/);
                 const data = [];
                 let lastDate = 'Unknown Date'; 
-                for (let i = 1; i < lines.length; i++) {
+                
+                // 1. SCAN METADATA FOR LINE ID
+                let autoDetectedLine = "Unknown Line";
+                // Scan first 20 lines for "Line ID:" or similar metadata
+                for(let k=0; k < Math.min(lines.length, 30); k++) {
+                    const row = lines[k].toUpperCase();
+                    if(row.includes("LINE ID:")) {
+                        // Extract "Line A", "Line B", etc. from string like "Line ID: Line A A3Speed"
+                        if(row.includes("LINE A")) autoDetectedLine = "Line A";
+                        else if(row.includes("LINE B")) autoDetectedLine = "Line B";
+                        else if(row.includes("LINE C")) autoDetectedLine = "Line C";
+                        else if(row.includes("LINE D")) autoDetectedLine = "Line D";
+                        break;
+                    }
+                }
+
+                // 2. FIND HEADER ROW
+                let headerRowIndex = 0;
+                for(let i=0; i<lines.length; i++) {
+                    if(lines[i].includes("Date") && lines[i].includes("Start Time") && lines[i].includes("Event Code")) {
+                        headerRowIndex = i;
+                        break;
+                    }
+                }
+
+                // 3. PARSE DATA ROWS
+                for (let i = headerRowIndex + 1; i < lines.length; i++) {
                     const rowRaw = lines[i];
                     if (!rowRaw.trim()) continue;
+                    
                     let row = [];
                     let inQuote = false;
                     let currentField = '';
@@ -259,22 +287,43 @@
                         else currentField += char;
                     }
                     row.push(currentField); 
+                    
+                    // Basic validity check
                     if (row.length < 5) continue; 
+                    
+                    // Date Filling Logic
                     let dateStr = row[0].trim();
                     let isFilled = false;
-                    if (dateStr) lastDate = dateStr;
-                    else { dateStr = lastDate; isFilled = true; }
+                    if (dateStr && dateStr.length > 5) { // Ensure valid date length
+                        lastDate = dateStr;
+                    } else { 
+                        dateStr = lastDate; 
+                        isFilled = true; 
+                    }
+
                     let description = row[4] ? row[4].replace(/^"|"$/g, '').replace(/""/g, '"').trim() : "Unknown";
-                    let line = row[2] ? row[2].trim() : "Unknown";
+                    
+                    // Use detected line if available, otherwise check column 2
+                    let line = autoDetectedLine;
+                    if (line === "Unknown Line" && row[2] && row[2].trim().length > 0) {
+                        line = row[2].trim();
+                    }
+
                     const durationMinutes = parseDurationToMinutes(row[5]);
+                    
+                    // Date Parsing (Handling M/D/YYYY)
                     const dateParts = dateStr.split('/'); 
                     let timestamp = 0;
-                    if (dateParts.length === 3) timestamp = new Date(dateParts[2], dateParts[0] - 1, dateParts[1]).getTime();
+                    if (dateParts.length === 3) {
+                        timestamp = new Date(dateParts[2], dateParts[0] - 1, dateParts[1]).getTime();
+                    }
+
                     let hour = -1;
                     if (row[1]) {
                         const timeParts = row[1].split(':');
                         if (timeParts.length > 0) hour = parseInt(timeParts[0], 10);
                     }
+
                     data.push({
                         id: `${fileName}-${i}-${Math.random().toString(36).substr(2,5)}`,
                         date: dateStr, 
